@@ -7,4 +7,4 @@ Use library Adafruit or NeoPixelBus. Select library in file helpers.cpp.
 With Adafruit NeoPixel library, pin and quantity of leds are changable at runtime via WEB.
 Support for required max amperage draw, with correction (PowerFactor).
 
-
+firmware.bin - compiled for ESP12 module

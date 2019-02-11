@@ -1,0 +1,182 @@
+<html>
+
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+</head>
+<script src="/functions.js"></script>
+<script>
+  var sstring = "";
+  var wsSocket;
+  var ledbuffer = [];
+  var numleds = 0;
+  var ledno = 0;
+  var PFbuffer = [];
+
+  function addToPFbuffer(strpf) {
+    var ipf = parseInt(strpf, 10);
+    var mxwidth = (document.getElementById("ipfdrawer").width - 10) / 5;
+    if (PFbuffer.length == mxwidth) {
+      PFbuffer.shift();
+      PFbuffer.push(ipf);
+    }
+    else if (PFbuffer.length < mxwidth) {
+      PFbuffer.push(ipf);
+    }
+    else {
+      PFbuffer.push(ipf);
+      while (PFbuffer.length > mxwidth) { PFbuffer.shift(); };
+    }
+  };
+  function myDrawPF() {
+    document.getElementById("ipfdrawer").width = document.documentElement.clientWidth - 10;
+    var canvas = document.getElementById("ipfdrawer");
+    var ctx = canvas.getContext("2d");
+    var lw = canvas.width / PFbuffer.length;
+    ctx.fillRect(0, 0, canvas.width, 1);
+    for (var x = 0; x < PFbuffer.length; x++) {
+      var r = 255 - PFbuffer[x];
+      var g = 54 + PFbuffer[x] * 2;
+      var b = 128 - PFbuffer[x];
+      var fs = "#" + r.toString(16) + g.toString(16) + b.toString(16);
+      ctx.fillStyle = fs;
+      ctx.fillRect(lw * x, canvas.height - PFbuffer[x], lw, canvas.height);
+    }
+    ctx.fillRect(0, 50, canvas.width, 1);
+    ctx.fillStyle = "#000000";
+    ctx.fillText("Powerfactor", 0, 50);
+  };
+  function myDrawLeds() {
+    document.getElementById("ileddrawer").width = document.documentElement.clientWidth - 10;
+    var canvas = document.getElementById("ileddrawer");
+    var ctx = canvas.getContext("2d");
+    var lw = canvas.width / ledbuffer.length;
+    for (var i = 0; i < ledbuffer.length; i++) {
+      var fs = "#" + ledbuffer[i];
+      ctx.fillStyle = fs;
+      ctx.fillRect(lw * i, 0, lw, canvas.height);
+    }
+  };
+  function myStartPage() {
+    addToPFbuffer("100");
+    myDrawPF();
+    myDrawLeds();
+    myInitWS();
+    cmdloadeffectlist();
+  };
+  function cmdloadeffectlist() {
+    myLoadURLToString("/effectliststring", myStringToListEffect);
+  };
+  function myStringToListEffect() {
+    myTableDeleteRowsN("iefftable", 1);
+    myStringToTable("iefftable");
+    var table = document.getElementById("iefftable");
+    for (var r = 1; r < table.rows.length; r++) {
+      var olds = table.rows[r].cells[0].innerHTML;
+      if (olds.length > 0) { table.rows[r].cells[0].innerHTML = "<input type='radio' name='radio1' value='" + olds + "'>" + olds; }
+    }
+  };
+  function myProcessWS(payload) {
+    if (payload.substr(0, 1) == "!") {
+      if (payload.substr(1, 1) == "#") {
+        var table = document.getElementById("iefftable");
+        for (var r = 1; r < table.rows.length; r++) {
+          if ((r - 1) == payload.substr(2)) { table.rows[r].style.fontWeight = "bold"; }
+          else { table.rows[r].style.fontWeight = "normal"; }
+        }
+      }
+      else if (payload.substr(1, 1) == "f") {
+        document.getElementById("ipowerfact").innerHTML = "Power factor:" + payload.substr(2) + " %";
+        addToPFbuffer(payload.substr(2));
+        myDrawPF();
+      }
+      else if (payload.substr(1, 1) == "p") {
+        document.getElementById("ipowerneed").innerHTML = "Power need:" + payload.substr(2) + " mA";
+      }
+      else if (payload.substr(1, 1) == "t") {
+        document.getElementById("itasktime").innerHTML = "Effect&WSuptade time:" + payload.substr(2) + " msec";
+      }
+      else if (payload.substr(1, 1) == "r") {
+        var irts = parseInt(payload.substr(2), 10);
+        document.getElementById("iruntime").innerHTML = "Runtime:" + irts + "sec";
+      }
+      else if (payload.substr(1, 1) == "L") {
+        numleds = payload.substr(2);
+        if (ledbuffer.length < numleds) {
+          for (var i = 0; i < numleds; i++) ledbuffer[i] = "FFFFFF";
+        };
+      }
+      else if (payload.substr(1, 1) == "N") {
+        ledno = payload.substr(2);
+        console.log("LED no: " + ledno);
+      }
+    }
+    else if (payload.substr(0, 1) == "*") {
+      var ssled = payload.substr(1);
+      if (ledno >= numleds) ledno = 0;
+      ledbuffer[ledno] = ssled;
+      ledno++;
+    };
+    myDrawLeds();
+  };
+  function myInitWS() {
+    wsSocket = new WebSocket("ws://" + window.location.hostname + ":81/");
+    wsSocket.onmessage = function (event) {
+      document.getElementById("iwsconsole").value = event.data;
+      myProcessWS(event.data);
+    }
+    wsSocket.onerror = function (event) {
+      alert("WebSocket error observed:" + event);
+    }
+    wsSocket.onclose = function (event) {
+      alert("WebSocket closed");
+    }
+  };
+  function cmdchoseeff() {
+    var chssid = document.forms[0];
+    for (let rr of chssid) {
+      if (rr.checked) {
+        wsSocket.send("!#" + rr.value);
+      }
+    }
+  };
+  function cmdpreviewleds() {
+    wsSocket.send("!p");
+  };
+</script>
+
+<body onload="myStartPage()">
+  <H2 style="text-align: center">Select effect:</H2>
+  <div style="background:navajowhite;">
+    <form id="iefflist" onchange="cmdchoseeff()" style="margin-left:10%">
+      <table id="iefftable" style="text-align: left; width: 80%; font-size: large">
+        <tr style="font-weight: bold;">
+          <td style="width: 5%">No:</td>
+          <td style="width: 50%">Effect Name:</td>
+        </tr>
+      </table>
+    </form>
+  </div>
+  <hr>
+  <table style="background:lemonchiffon; width: 100%;">
+    <tr>
+      <td id="ipowerneed">1</td>
+      <td id="itasktime">2</td>
+    </tr>
+    <tr>
+      <td id="ipowerfact">1</td>
+      <td id="iruntime">2</td>
+    </tr>
+  </table>
+  <canvas width="600" height="100" id="ipfdrawer"></canvas>
+  <hr>
+  <canvas width="600" height="10" id="ileddrawer"></canvas><br><br>
+  <button onclick="cmdpreviewleds()">Preview LEDs</button>
+  <hr>
+  <div>
+    <samp><b>WebSocket debug:</b><br>
+      <textarea id="iwsconsole" style="width: 20vw; height: 10vh;"></textarea>
+    </samp>
+  </div>
+</body>
+
+</html>

@@ -1,0 +1,82 @@
+<html>
+
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+</head>
+<script src="/functions.js"></script>
+<script>
+  var sstring = "";
+  function cmdloadwifilist() {
+    myLoadURLToString("/wifiliststring", myStringToListSSID);
+  }
+  function cmdloadrescan() {
+    myLoadURLToString("/rescancmd", myAfterRescan);
+  }
+  function cmdloadwps() {
+    myLoadURLToString("/wpscmd", myAfterRescan);
+  }
+  function myStringToListSSID() {
+    myTableDeleteRowsN("issidtable", 1);
+    myStringToTable("issidtable");
+    var table = document.getElementById("issidtable");
+    for (var r = 1; r < table.rows.length; r++) {
+      var olds = table.rows[r].cells[0].innerHTML;
+      table.rows[r].cells[0].innerHTML = olds + "<input type='radio' name='radio1' value='" + olds + "'>";
+    }
+  }
+  function cmdchosessid() {
+    var chssid = document.forms[1];
+    for (let rr of chssid) {
+      if (rr.checked) {
+        document.getElementById("istaname").value = rr.value;
+      }
+    };
+  }
+  function myAfterRescan() {
+    document.getElementById("irescantext").innerHTML = sstring;
+    myStartTimer(15000);
+  }
+  function cmdsubmitsave() {
+    var isok = true;
+    if (document.getElementById("istaname").value.length > 32) {
+      isok = false;
+      alert("SSID name must be < 33");
+    }
+    if (document.getElementById("istapass").value.length > 64) {
+      isok = false;
+      alert("Password name must be < 65");
+    }
+    return isok;
+  }
+</script>
+
+<body onload="cmdloadwifilist()">
+  <H2 style="text-align: center">WiFi connection configuration:</H2>
+  <form id="isaveform" method="post" action="/cfgwifisave" onsubmit="return cmdsubmitsave()" style="background-color:#CCFFCC; text-align:center">
+    <p><b>Standalone AP<input type='radio' name='wlanmode' value='AP'></b><br><sup>Default Web IP: 192.168.4.1</sup></p>
+    <p><b>Connect to STA<input type='radio' name='wlanmode' value='STA' checked></b></p>
+    <hr>
+    <p><b>Choose network from the list below or enter SSID:</p>
+    <input id="istaname" name="staname" type="text" value="" style="height: 40px; width: 50vw">
+    <br>Password:<br></b>
+    <input id="istapass" name="stapass" type="password" value="" style="height: 40px; width: 50vw">
+    <br><br>
+    <input type="reset" value="Clear">_____<input type="submit" value="Save"><br><br>
+  </form>
+  <form id="issidlist" style="background-color: darkseagreen; text-align:center" onchange="cmdchosessid()">
+    <b>Networks list</b><br><br>
+    <table id="issidtable" style="text-align: center; width: 80%;">
+      <tr style="font-weight: bold;">
+        <td style="width: 60vw">SSID:</td>
+        <td style="width: 10vw">RSSI:</td>
+        <td style="width: 30vw">Encryption:</td>
+      </tr>
+    </table>
+  </form>
+  <div id="irescantext" style="text-align: center">
+    <button onclick="cmdloadrescan()">Rescan!</button><br>
+    <hr><br><br>First push router's WPS button, then click <button onclick="cmdloadwps()">Connect WPS</button> and
+    wait.</div>
+</body>
+
+</html>

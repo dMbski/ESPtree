@@ -1,0 +1,27 @@
+﻿<html>
+
+<head>
+	<meta content="en" http-equiv="Content-Language">
+</head>
+<script src="/functions.js"></script>
+<script>
+	var sstring = "";
+	function RunThis() {
+		myTableDeleteRowsN("idinfotable", 1);
+		myLoadURLToString("/infostring", myStringToTable, "idinfotable");
+	};
+
+</script>
+
+<body onload="RunThis()">
+	<table id="idinfotable" style="width: 80%; font-weight: normal; background-color:rgb(209, 255, 209);">
+		<tr style="font-weight: bold">
+			<td>Name</td>
+			<td>Value</td>
+			<td></td>
+		</tr>
+	</table>
+	<button onclick="RunThis()">Refresh info</button>
+</body>
+
+</html>

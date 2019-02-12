@@ -1,7 +1,7 @@
 # ESPtree
 another ESP8266 controller for neopixels strip, with WEB iterface and some cool features
 THIS IS **NOT COMPLETED**...barely tested 
->*but yet usable* ;-)
+>big mess in source, *but yet usable* ;-)
 >
 ><img height="300" src="https://github.com/dMbski/ESPtree/blob/master/screens/Schowek09.jpg" /><img height="300" src="https://github.com/dMbski/ESPtree/blob/master/screens/Schowek10.jpg" />
 ><img height="300" src="https://github.com/dMbski/ESPtree/blob/master/screens/Schowek11.jpg" /><img height="300" src="https://github.com/dMbski/ESPtree/blob/master/screens/Schowek12.jpg" />

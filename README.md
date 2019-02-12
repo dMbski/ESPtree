@@ -23,7 +23,7 @@ I use VSS with platformio and when it is enabled, I get compiller error. Tested 
 #### Use status LED.
 Use led connected to pin specified by LED_BUILTIN (MCU v2 GPIO16).
 #### Arduino IDE
-To run this project in Arduino IDE, just copy /src folder to Arduino's sketch folder. Rename it to esptree and **rename** file main.cpp to esptree.ino. **Download needed libraries.**
+To run this project in Arduino IDE, just copy /src folder to Arduino's sketches folder. Rename it to esptree and **rename** file main.cpp to esptree.ino. **Download needed libraries.**
 #### Usable and tested only with esp8266:
 - ESP01 module -need to disable OTA, no need to use SPIFF (all pages in flash);
 - ESP12e -all features

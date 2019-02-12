@@ -204,7 +204,7 @@ void loop()
   ttime = millis() - ttime;
   if (ttime > TaskEffectProcTimeMax)
   {
-    if (TaskEffectProcTimeMax > (PERIOD_TASK_WIFI*5))
+    if (TaskEffectProcTimeMax > (PERIOD_TASK_WIFI*4))
     {//something is wrong, restart
     WlanStatus = WLAN_ESP_RESTART;
     SERIALPRINTD("\r\n----Restart, exceed max proccessing time (twice), ms:", ttime);

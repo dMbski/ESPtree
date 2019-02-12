@@ -12,6 +12,10 @@ Select library in file helpers.cpp. With *Adafruit NeoPixel* library, **pin and 
 Beware, when use pin used to connectivity *ex. NeoEsp8266Dma800KbpsMethod needs UART0 RX pin -GPIO3 (which is used also to upload firmware)* strip will lights without control.
 #### Support for OTA.
 Firmware update via httpupdate from configtree page (at the bottom). See credentials data from helpers.cpp (admin,admin).
+#### WebSockets ?
+Works in all aspects (sending parameters, led data) but...
+When sending data has low speed just interferes with other functions. There are some glitches then, even WDT resets. 
+There is feature when cycle is to long *(4xPERIOD_TASK_WIFI)* twice , resets ESP. 
 #### Use key to change effect.
 I tested this on MCU v2 clone with key marked Flash which is connected to GPIO0. Changable in helpers.cpp (USE_KEY_GPIO). Enabled INPUT_PULLUP.
 #### Use WPS connectivity

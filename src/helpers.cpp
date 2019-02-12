@@ -22,6 +22,7 @@
 //#define USE_MDNS //uncomment to use mDNS service for web DEF_XMAS_HOSTNAME.local
 
 #define USE_KEY //use gpio0 key to change mode 
+#define USE_KEY_GPIO    0
 
 #ifdef USE_ADA_NEOPIXEL
 #include <Adafruit_NeoPixel.h>

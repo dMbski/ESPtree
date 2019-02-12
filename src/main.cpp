@@ -135,8 +135,6 @@ void setup()
 
   TaskEffectChange = millis() + Xmas.EffectTimeoutMs;
   TaskEffectId = Xmas.EffectStartWith;
-  //CheckEffectId(); //rewind effect id 0<<maxeffects
-  randomSeed(RANDOM_SEED);
   SERIALPRINTD("\r\n_____Setup ends. Free ram:", ESP.getFreeHeap());
 }
 

@@ -137,12 +137,11 @@ void PixEffect(u8_t effno)
       PixSparkle(1, COL_WHITE);
     break; //end EFF_BLUE_SP
   case EFF_RED_SP:
-    fase= random(20);
+    fase= random(PixBuffCount/4);
     PixFade(fase/3);
     currcol32 = PixColor32(random(255), 0, 0);
     PixSparkle(fase, currcol32);
-    if ((lastled % 8)) PixSparkle(1, COL_YELOW);
-    lastled+=fase;
+    if (!(fase % 4)) PixSparkle(1, COL_YELOW);
     break; //end EFF_RED_SP
   case EFF_RAINBOW_SP:
     if (lastcol32 >= HUE_MAX)

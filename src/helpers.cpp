@@ -86,7 +86,6 @@
 #define DEF_XMAS_LEDTYPE (NEO_GRB)
 #endif
 //helpful definitions
-#define RANDOM_SEED 0x4f1f2334
 #define EEPROM_SIZE 250 //should be minimal (buffred in ram) & need to be <= SPI_FLASH_SEC_SIZE (4092)
 #define EEPROM_START 1
 

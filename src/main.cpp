@@ -102,7 +102,7 @@ void setup()
   WiFi.persistent(false); //dont store wifi config in sdk flash, we'll take of that
   pinMode(LED_BUILTIN, OUTPUT);
 #ifdef USE_KEY
-  pinMode(0, INPUT_PULLUP);
+  pinMode(USE_KEY_GPIO, INPUT_PULLUP);
 #endif
   EEPROM.begin(EEPROM_SIZE);
   EEPROM.get(EEPROM_START, Xmas); //loads config from eeporm
@@ -473,7 +473,7 @@ void Task_StatusLED()
 void Task_Button()
 {
   static uint8_t lst;
-  uint8_t ast = digitalRead(0);
+  uint8_t ast = digitalRead(USE_KEY_GPIO);
   if (ast == lst)
   {
     ast = !ast;

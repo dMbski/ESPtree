@@ -13,15 +13,16 @@
 //#define USE_NEOPIXELBUS
 
 
-//#define USE_FTPSRV          //USE ftp_server with spiff
-// #define USE_SPIFFS   //
+//#define USE_FTPSRV    //NOT implemented:USE ftp_server with spiff 
+// #define USE_SPIFFS   //NOT implemented: plan to move pages to spiff and complie to http use flash or spiff
+                        //should then be a warning-info page, when there is nothing on spiff to serve  
 
 #define USE_SERIAL //comment this to disable serial communications (maybe for fastled?)
 //#define USE_WPS        //uncomment this for use WPS not tested, problem with VSS
 #define USE_OTA //uncomment to use OTA httpupdate with link /DEF_XMAS_OTAPATH
 //#define USE_MDNS //uncomment to use mDNS service for web DEF_XMAS_HOSTNAME.local
 
-#define USE_KEY //use gpio0 key to change mode 
+#define USE_KEY         //use gpio0 key to change mode-effect
 #define USE_KEY_GPIO    0
 
 #ifdef USE_ADA_NEOPIXEL
@@ -65,6 +66,7 @@
 #endif
 #ifdef USE_SPIFFS
 #include <spiffs.h>
+#warning SPIFF not implemented!
 #endif
 #define DEF_XMAS_OTAUSER "admin"
 #define DEF_XMAS_OTAPASS "admin"
@@ -76,7 +78,7 @@
 #else
 #define DEF_XMAS_OTAENABLE  false
 #endif
-#define DEF_XMAS_LEDCOUNT 200   // 
+#define DEF_XMAS_LEDCOUNT 100   // 
 #define DEF_XMAS_LEDPIN 5 //only for adafruits library
 #define DEF_XMAS_AMPMAX 500
 #define DEF_XMAS_AP_WLANOFF_MS uint32_t(30 * 60 * 1000) //in millis disable AP WIFI after last connection 30min
@@ -89,7 +91,7 @@
 #define EEPROM_SIZE 250 //should be minimal (buffred in ram) & need to be <= SPI_FLASH_SEC_SIZE (4092)
 #define EEPROM_START 1
 
-#define XMAS_VER 11 //change this will clear stored settings = default settings
+#define XMAS_VER 20 //change this will clear stored settings = default settings
 #define EEPROM_MAGIC 0x0F
 
 //definitions for Xmas.WifiMode

@@ -7,13 +7,17 @@ void PixFill(uint32_t col32);
 void PixScrollUp();
 void PixScrollDown();
 void PixSparkle(uint16_t count, uint32_t col32);
-void PixFade(uint8_t steps);
+void PixFadeAll(uint8_t steps);
+uint32_t PixFade32(uint32_t c, uint8_t steps);
 void PixSmooth();
 inline uint16_t PixNext(uint16_t currpix);
 void PixSet(uint16_t pixno, uint32_t col32);
 void PixSet(uint16_t pixno, uint8_t r, uint8_t g, uint8_t b);
 un_color32 PixGet(uint16_t pixno);
 inline uint32_t PixColor32(uint8_t r, uint8_t g, uint8_t b);
+inline uint8 PixGetRed(uint32_t c32);
+inline uint8 PixGetGreen(uint32_t c32);
+inline uint8 PixGetBlue(uint32_t c32);
 void PixEffect(u8_t effno); //processing effects
 
 //external declarations
@@ -25,18 +29,20 @@ extern struct_xmas_config Xmas;
 #define HUE_RES 3 //resolution for huetorgb conversion 0=<hue<(360*hue_res)
 #define HUE_MAX (HUE_RES * 360)
 
-#define EFFECTS_COUNT   11
-#define EFF_TESTRGB     0
-#define EFF_RAINBOW     1
-#define EFF_BLUE_SP     2
-#define EFF_RED_SP      3
-#define EFF_RAINBOW_SP  4
-#define EFF_RIB_RAND    5
+#define EFFECTS_COUNT 13
+#define EFF_TESTRGB 0
+#define EFF_RAINBOW 1
+#define EFF_BLUE_SP 2
+#define EFF_RED_SP 3
+#define EFF_RAINBOW_SP 4
+#define EFF_RIB_RAND 5
 #define EFF_TWO_RAINBOW 6
-#define EFF_TWO_RG      7
-#define EFF_TWO_COMETS  8
-#define EFF_COMET_RAND  9
+#define EFF_TWO_RG 7
+#define EFF_TWO_COMETS 8
+#define EFF_COMET_RAND 9
 #define EFF_MPOINTS 10
+#define EFF_MP_MATRIX 11
+#define EFF_MP_REDF 12
 
 #define EFF0_NAME F("Slow Color check (R R R G G B)")
 #define EFF1_NAME F("Scrolled down rainbow")
@@ -48,7 +54,9 @@ extern struct_xmas_config Xmas;
 #define EFF7_NAME F("Two point (Red Green)")
 #define EFF8_NAME F("Two comets")
 #define EFF9_NAME F("Random comet")
-#define EFF10_NAME F("Middle points rainbow")
+#define EFF10_NAME F("Vert middle points rainbow")
+#define EFF11_NAME F("Vert slow green rain")
+#define EFF12_NAME F("Vert red glowing up")
 
 String EffectName(uint8_t no)
 {
@@ -73,7 +81,11 @@ String EffectName(uint8_t no)
   if (no == 9)
     return (EFF9_NAME);
   if (no == 10)
-    return (EFF10_NAME);    
+    return (EFF10_NAME);
+  if (no == 11)
+    return (EFF11_NAME);
+  if (no == 12)
+    return (EFF12_NAME);
   return "";
 };
 
@@ -96,7 +108,9 @@ void PixEffect(u8_t effno)
   static uint8_t colval;
   static uint16_t fase;
   static int8_t direction;
-  static u8_t lasteffect; //to detect effect change
+  static u8_t lasteffect;                         //to detect effect change
+  const uint8_t linebuffcount = MAX_MIDDLEPOINTS; //width of e buffer, one line, int becouse some eff have negative numbers
+  static int32_t linebuff[linebuffcount];
 
   if (lastled > PixBuffCount)
     lastled = 0;
@@ -112,14 +126,14 @@ void PixEffect(u8_t effno)
     {
       direction = 1;
     }
-    currcol32 = HueToRGB32(0, 255, colval);
+    currcol32 = PixColor32(colval, 0, 0);
     PixSet(lastled++, currcol32);
     PixSet(lastled++, currcol32);
     PixSet(lastled++, currcol32);
-    currcol32 = HueToRGB32(120 * HUE_RES, 255, colval);
+    currcol32 = PixColor32(0, colval, 0);
     PixSet(lastled++, currcol32);
     PixSet(lastled++, currcol32);
-    PixSet(lastled++, HueToRGB32(240 * HUE_RES, 255, colval));
+    PixSet(lastled++, PixColor32(0, 0, colval));
     colval = colval + direction;
     break; //end EFF_TESTRGB
   case EFF_RAINBOW:
@@ -131,7 +145,7 @@ void PixEffect(u8_t effno)
     break; //end EFF_RAINBOW
   case EFF_BLUE_SP:
     fase = random(25);
-    PixFade(fase / 2);
+    PixFadeAll(fase / 2);
     currcol32 = random(COL_BLUE);
     for (int i = 0; i < fase; i++)
     {
@@ -143,7 +157,7 @@ void PixEffect(u8_t effno)
     break; //end EFF_BLUE_SP
   case EFF_RED_SP:
     fase = random(PixBuffCount / 4);
-    PixFade(fase / 3);
+    PixFadeAll(fase / 3);
     currcol32 = PixColor32(random(255), 0, 0);
     PixSparkle(fase, currcol32);
     if (!(fase % 4))
@@ -153,7 +167,7 @@ void PixEffect(u8_t effno)
     if (lastcol32 >= HUE_MAX)
       lastcol32 = 0;
     fase = 2 + random(10);
-    PixFade(fase / 2);
+    PixFadeAll(fase / 2);
     PixSparkle(fase, HueToRGB32(lastcol32++, 255, 200));
     break; //end EFF_RAINBOW_SP
   case EFF_RIB_RAND:
@@ -170,12 +184,12 @@ void PixEffect(u8_t effno)
     }
     PixSet(lastled - 1, lastcol32);
     PixSet(lastled + 1, lastcol32);
-    PixFade(1);
+    PixFadeAll(1);
     PixSet(lastled, lastcol32);
     lastled = lastled + fase;
     break; //end EFF_RIB_RAND
   case EFF_TWO_RAINBOW:
-    PixFade(lastled / 20);
+    PixFadeAll(lastled / 20);
     if (lastcol32 > HUE_MAX)
       lastcol32 = 0;
     PixSet(PixBuffCount - lastled, HueToRGB32(lastcol32 + (180 * HUE_RES), 255, 255));
@@ -184,7 +198,7 @@ void PixEffect(u8_t effno)
     lastcol32++;
     break; //end EFF_TWO_RAINBOW
   case EFF_TWO_RG:
-    PixFade(lastled / 20);
+    PixFadeAll(lastled / 20);
     PixSet(PixBuffCount - lastled, COL_GREN);
     PixSet(lastled, COL_RED);
     lastled++;
@@ -196,7 +210,7 @@ void PixEffect(u8_t effno)
       lastcol32 = random(HUE_MAX);
     }
     lastled++;
-    PixFade(8);
+    PixFadeAll(8);
     if (lastled % 2)
       break;
     for (currled = 0; currled < 8; currled++)
@@ -214,7 +228,7 @@ void PixEffect(u8_t effno)
       colsat = 255 / (PixBuffCount / 10);
       PixSparkle((PixBuffCount / 10), HueToRGB32(lastcol32 + 180 * HUE_RES, 255, 255));
     }
-    PixFade(2);
+    PixFadeAll(2);
     colval = 0;
     for (currled = PixBuffCount / 10; currled > 0; currled--)
     {
@@ -224,26 +238,90 @@ void PixEffect(u8_t effno)
     }
     lastled--;
     break; //end EFF_COMET_RAND
-    case EFF_MPOINTS:
+  case EFF_MPOINTS:
     if (fase >= MAX_MIDDLEPOINTS)
     {
-      fase= 0;
+      fase = 0;
       lastcol32++;
-      if (lastcol32>HUE_MAX) lastcol32=0;
-      PixFade(1);
-      colval= colval+direction;
-      if (colval> 200) direction= -1;
-      if (colval < 50) direction= 1;
+      if (lastcol32 > HUE_MAX)
+        lastcol32 = 0;
+      PixFadeAll(1);
+      colval = colval + direction;
+      if (colval > 160)
+        direction = -1;
+      if (colval < 50)
+        direction = 1;
     }
-    for (uint16_t i=1; i< 10; i++)
+    for (uint16_t i = 1; i < ((PixBuffCount / MAX_MIDDLEPOINTS) / 2); i++)
     {
-      currcol32= HueToRGB32(lastcol32*i, 255, colval);
-      PixSet(Xmas.Stripe1.MiddlePoints[fase]-i, currcol32);
-      PixSet(Xmas.Stripe1.MiddlePoints[fase]+i, currcol32);
+      currcol32 = HueToRGB32(lastcol32 * i, 255, colval);
+      PixSet(Xmas.Stripe1.MiddlePoints[fase] - i, currcol32);
+      PixSet(Xmas.Stripe1.MiddlePoints[fase] + i, currcol32);
     }
-    PixSet(Xmas.Stripe1.MiddlePoints[fase], COL_RED);
+    if (colval %2) PixSet(Xmas.Stripe1.MiddlePoints[fase], COL_WHITE);
+    else PixSet(Xmas.Stripe1.MiddlePoints[fase], COL_BLACK);
     fase++;
     break; //end EFF_MPOINTS
+  case EFF_MP_MATRIX:
+    if (lasteffect != effno)
+    {
+      for (fase = 0; fase < linebuffcount; fase++)
+      {
+        linebuff[fase] = MAX_MIDDLEPOINTS + random(MAX_MIDDLEPOINTS);
+      }
+      fase = 0;
+    }
+    if (fase >= linebuffcount)
+    {
+      fase = 0;
+      PixFadeAll(255 / (MAX_MIDDLEPOINTS * 2));
+    };
+    if ((linebuff[fase] < MAX_MIDDLEPOINTS) && (linebuff[fase] >= 0))
+    {
+      PixSet(Xmas.Stripe1.MiddlePoints[linebuff[fase]] - fase, COL_GREN);
+      PixSet(Xmas.Stripe1.MiddlePoints[linebuff[fase]] + fase, COL_GREN);
+    }
+    linebuff[fase] = linebuff[fase] - 1;
+    if (linebuff[fase] < (-MAX_MIDDLEPOINTS))
+    {
+      linebuff[fase] = MAX_MIDDLEPOINTS + random(MAX_MIDDLEPOINTS);
+    }
+    fase++;
+    break; //end EFF_MP_MATRIX
+  case EFF_MP_REDF:
+    if (fase >= MAX_MIDDLEPOINTS)
+    {
+      fase = 0;
+      for (uint8_t x = 0; x < linebuffcount; x++)
+        linebuff[x] = PixColor32(random(255), random(x), random(x));
+      PixSmooth();
+    }
+    uint16_t mp = Xmas.Stripe1.MiddlePoints[fase];
+    if (fase == 0)
+    {
+      PixFadeAll(random(MAX_MIDDLEPOINTS));
+      PixSparkle(1, COL_YELOW);
+      for (uint8_t x = 0; x < linebuffcount; x++)
+      {
+        PixSet(mp - x, linebuff[x]);
+        PixSet(mp + x, linebuff[x]);
+      }
+    }
+    else
+    {
+      PixFadeAll(255 / (MAX_MIDDLEPOINTS * 2));
+      for (uint8_t x = 0; x < linebuffcount; x++)
+      {
+        un_color32 cc;
+        linebuff[x] = PixFade32(linebuff[x], random(fase));
+        cc = PixGet(mp - x);
+        PixSet(mp - x, cc.c8.r / 2 + PixGetRed(linebuff[x]) / 2, cc.c8.g / 2 + PixGetGreen(linebuff[x]) / 2, cc.c8.b / 2 + PixGetBlue(linebuff[x]) / 2);
+        cc = PixGet(mp + x);
+        PixSet(mp + x, (cc.c8.r + PixGetRed(linebuff[x])) / 2, (cc.c8.g + PixGetGreen(linebuff[x])) / 2, (cc.c8.b + PixGetBlue(linebuff[x])) / 2);
+      }
+    }
+    fase++;
+    break; //end EFF_MP_RED
   }
   lasteffect = effno;
 }
@@ -252,29 +330,48 @@ inline uint32_t PixColor32(uint8_t r, uint8_t g, uint8_t b)
 {
   return ((uint32_t)r << 16) | ((uint32_t)g << 8) | b;
 }
-//--------
-void PixFade(uint8_t steps)
+//------------
+inline uint8 PixGetRed(uint32_t c32)
 {
-  int32_t r, g, b;
-  un_color32 cc;
+  return ((0x00FF0000 & c32) >> 16);
+}
+//------------
+inline uint8 PixGetGreen(uint32_t c32)
+{
+  return ((0x0000FF00 & c32) >> 8);
+}
+//-------------
+inline uint8 PixGetBlue(uint32_t c32)
+{
+  return (0x000000FF & c32);
+}
+//--------
+uint32_t PixFade32(uint32_t c, uint8_t steps)
+{
+  un_color32 ret;
+  ret.c32 = c;
+  if (ret.c8.r > steps)
+    ret.c8.r = ret.c8.r - steps;
+  else
+    ret.c8.r = 0;
+  if (ret.c8.g > steps)
+    ret.c8.g = ret.c8.g - steps;
+  else
+    ret.c8.g = 0;
+  if (ret.c8.b > steps)
+    ret.c8.b = ret.c8.b - steps;
+  else
+    ret.c8.b = 0;
+  return ret.c32;
+}
+//--------
+void PixFadeAll(uint8_t steps)
+{
   if (steps == 0)
     return;
   for (uint16_t i = 0; i < PixBuffCount; i++)
   {
-    cc = PixGet(i);
-    r = cc.c8.r;
-    g = cc.c8.g;
-    b = cc.c8.b;
-    r = r - steps;
-    g = g - steps;
-    b = b - steps;
-    if (r < 0)
-      r = 0;
-    if (g < 0)
-      g = 0;
-    if (b < 0)
-      b = 0;
-    PixSet(i, r, g, b);
+    PixSet(i, PixFade32(PixGet(i).c32, steps));
     yield();
   }
 }

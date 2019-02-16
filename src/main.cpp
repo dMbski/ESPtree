@@ -81,6 +81,7 @@ u32_t Enter_TaskStatusLed = PERIOD_TASK_STATUSLED;
 u32_t Enter_TaskEffect = PERIOD_TASK_EFFECT;
 u32_t Enter_TaskUpdateWS = PERIOD_TASK_UPDATEWS;
 bool TaskUpdateWSsendLEDs = false;
+bool TaskUpdateWSsendData = false;
 #ifdef USE_KEY
 u32_t Enter_TaskButton = PERIOD_TASK_BUTTON;
 #endif
@@ -202,10 +203,10 @@ void loop()
   ttime = millis() - ttime;
   if (ttime > TaskEffectProcTimeMax)
   {
-    if (TaskEffectProcTimeMax > (PERIOD_TASK_WIFI*4))
-    {//something is wrong, restart
-    WlanStatus = WLAN_ESP_RESTART;
-    SERIALPRINTD("\r\n----Restart, exceed max proccessing time (twice), ms:", ttime);
+    if (TaskEffectProcTimeMax > (PERIOD_TASK_WIFI * 4))
+    { //something is wrong, restart
+      WlanStatus = WLAN_ESP_RESTART;
+      SERIALPRINTD("\r\n----Restart, exceed max proccessing time (twice), ms:", ttime);
     }
     TaskEffectProcTimeMax = ttime;
     TaskEffectprocTime = (TaskEffectProcTimeMax + TaskEffectprocTime) / 2 + TaskEffectUpdTimeMax;
@@ -236,6 +237,12 @@ void xmas_resetconfig()
   Xmas.Stripe1.neoPixelType = DEF_XMAS_LEDTYPE;
   Xmas.Stripe1.AmperageMax = DEF_XMAS_AMPMAX;
   Xmas.Stripe1.LedCounts = DEF_XMAS_LEDCOUNT;
+  for (uint16_t i = 0; i < MAX_MIDDLEPOINTS; i++)
+  {
+    Xmas.Stripe1.MiddlePoints[i] = (Xmas.Stripe1.LedCounts / MAX_MIDDLEPOINTS) / 2 + i * (Xmas.Stripe1.LedCounts / MAX_MIDDLEPOINTS);
+    if (Xmas.Stripe1.MiddlePoints[i] >= Xmas.Stripe1.LedCounts)
+      Xmas.Stripe1.MiddlePoints[i] = Xmas.Stripe1.LedCounts - 1;
+  }
 }
 //-------------------------------
 void xmas_writeconfig(u8 wifimode)
@@ -282,6 +289,7 @@ void xmas_printcfg(struct_xmas_config *cfg)
   SERIALPRINTD("\r\nStripe1.AmperageMax(mA):", cfg->Stripe1.AmperageMax);
   SERIALPRINTD("\r\nStripe1.PinNo:", cfg->Stripe1.PinNo);
   SERIALPRINTD("\r\nStripe1.neoPixelType:", NeoPixeltypeToStr(cfg->Stripe1.neoPixelType));
+  //TODO: add middlepoints
 #ifdef USE_NEOPIXELBUS
   SERIALPRINTF("\r\nUse NeoPixelBus library. Check in source for details.");
   SERIALPRINTD("\r\nMaximum Leds count: ", NP_LEDSCOUNTMAX);
@@ -374,37 +382,37 @@ void Task_UpdateWS()
   {
     StrBuffer1 = "!#";
     StrBuffer1.concat(TaskEffectId);
-  };
-  if (tfase == 1)
+  }
+  if (tfase == 1 && TaskUpdateWSsendData)
   {
     StrBuffer1 = "!f";
     StrBuffer1.concat(TaskEffectPFStrip1);
   }
-  if (tfase == 2)
+  if (tfase == 2 && TaskUpdateWSsendData)
   {
     StrBuffer1 = "!p";
     StrBuffer1.concat(TaskEffectPowerNeed);
   }
-  if (tfase == 3)
+  if (tfase == 3 && TaskUpdateWSsendData)
   {
     StrBuffer1 = "!L";
     StrBuffer1.concat(PixBuffCount);
   }
-  if (tfase == 4)
+  if (tfase == 4 && TaskUpdateWSsendData)
   {
     StrBuffer1 = "!t";
     StrBuffer1.concat(TaskEffectprocTime);
   }
-  if (tfase == 5)
+  if (tfase == 5 && TaskUpdateWSsendData)
   {
     StrBuffer1 = "!N";
     StrBuffer1.concat(ledno);
   }
-  if (tfase == 6)
+  if (tfase == 6 && TaskUpdateWSsendData)
   {
     StrBuffer1 = "!r";
-    StrBuffer1.concat((millis()/1000));
-  }  
+    StrBuffer1.concat((millis() / 1000));
+  }
   if (tfase == 7 && TaskUpdateWSsendLEDs)
   {
     if (TaskEffectprocTime > PERIOD_TASK_UPDATEWS)
@@ -717,12 +725,20 @@ void servers_handleWS(uint8_t num, WStype_t type, uint8_t *payload, size_t lengh
     if (payload[0] == '!')
     { //maybe some commands
       if (payload[1] == '#')
-      { //change effect
+      { //change effect !#number
         ChangeEffect(strtol((const char *)&payload[2], NULL, 10));
       }
       if (payload[1] == 'p')
-      { //preview leds
+      { //preview leds  !p
         TaskUpdateWSsendLEDs = true;
+      }
+      if (payload[1] == '!')
+      { //enables sending data !!
+        TaskUpdateWSsendData = true;
+      }
+      if (payload[1] == 's')
+      { //pause sending data !!
+        TaskUpdateWSsendData = false;
       }
     }
     ServerWS.broadcastTXT(payload, lenght);
@@ -882,7 +898,13 @@ void servers_handleInfoString()
   StrBuffer1.concat(Xmas.Stripe1.LedCounts);
   StrBuffer1.concat(F("</b>;}{Amperage max:;<b>"));
   StrBuffer1.concat(Xmas.Stripe1.AmperageMax);
-  StrBuffer1.concat(F("</b>;mA}{Max Effect Processing Time:;"));
+  StrBuffer1.concat(F("</b>;mA}{Middle points:;"));
+  for (uint16_t i = 0; i < MAX_MIDDLEPOINTS; i++)
+  {
+    StrBuffer1.concat(Xmas.Stripe1.MiddlePoints[i]);
+    StrBuffer1.concat(" ");
+  }
+  StrBuffer1.concat(F("}{Max Effect Processing Time:;"));
   StrBuffer1.concat(TaskEffectProcTimeMax);
   StrBuffer1.concat(F(";msec}{Max Update Strip Time:;"));
   StrBuffer1.concat(TaskEffectUpdTimeMax);

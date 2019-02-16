@@ -77,7 +77,7 @@
 #define DEF_XMAS_OTAENABLE  false
 #endif
 #define DEF_XMAS_LEDCOUNT 200   // 
-#define DEF_XMAS_LEDPIN 15 //only for adafruits library
+#define DEF_XMAS_LEDPIN 5 //only for adafruits library
 #define DEF_XMAS_AMPMAX 500
 #define DEF_XMAS_AP_WLANOFF_MS uint32_t(30 * 60 * 1000) //in millis disable AP WIFI after last connection 30min
 #ifdef USE_ADA_NEOPIXEL
@@ -89,8 +89,8 @@
 #define EEPROM_SIZE 250 //should be minimal (buffred in ram) & need to be <= SPI_FLASH_SEC_SIZE (4092)
 #define EEPROM_START 1
 
-#define XMAS_VER 20 //change this will clear stored settings = default settings
-#define EEPROM_MAGIC 0xF0
+#define XMAS_VER 11 //change this will clear stored settings = default settings
+#define EEPROM_MAGIC 0x0F
 
 //definitions for Xmas.WifiMode
 #define WIFI_MODE_AP 0         //default starts in Ap mode
@@ -147,13 +147,14 @@ union un_color32
         uint8_t id;
     }c8;
 };
-
+#define MAX_MIDDLEPOINTS 10
 struct struct_xmas_stripe
 {
     uint8_t PinNo;
     uint16_t neoPixelType;
     uint16_t LedCounts;
     uint32_t AmperageMax;
+    uint16_t MiddlePoints[MAX_MIDDLEPOINTS];
 };
 struct struct_xmas_config
 {
@@ -168,9 +169,6 @@ struct struct_xmas_config
     uint32_t EffectTimeoutMs;
     u8_t EffectStartWith;
     struct_xmas_stripe Stripe1;
-#ifdef STRIPE2_ENABLED
-    struct_xmas_stripe Stripe2;
-#endif
 };
 //extern xmas_config Xmas;
 #endif

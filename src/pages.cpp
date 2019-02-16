@@ -13,32 +13,15 @@ char page_main[] PROGMEM = R"=====(
 )=====";
 
 char page_functions[] PROGMEM = R"=====(
-function myLoadURLToString(spurl, callbackf, callbackvar) {var req = new XMLHttpRequest();req.open('GET', spurl, true);
-req.onreadystatechange = function (aEvt) {if (req.readyState == 4) {if (req.status == 200) {console.log("Loaded: " + req.responseText);sstring = req.responseText;callbackf(callbackvar);}
-else {console.log("Error loading:" + spurl);sstring = "";}}};req.send(null);};
-function myStringToTable(tableid) {
-var regexstart = /{/gi;
-var ssrows = sstring.replace(regexstart, '').split('}');var table = document.getElementById(tableid);
-for (let ssr of ssrows) {var sscols = ssr.split(';');var row = table.insertRow(table.rows.lenght);var i;
-for (i = 0; i < sscols.length; i++) {row.insertCell(i).innerHTML = sscols[i];}};};
-function myTableDeleteRowsN(tableid, rowstokeep){var table = document.getElementById(tableid);while (table.rows.length > rowstokeep) {table.deleteRow(rowstokeep);}};
-function myStartTimer(timedelayms) {setTimeout(myStopTimer, timedelayms);}
-function myStopTimer() {location.reload();}
+function myLoadURLToString(a,b,c){var d=new XMLHttpRequest;d.open("GET",a,!0),d.onreadystatechange=function(){4==d.readyState&&(200==d.status?(console.log("Loaded: "+d.responseText),sstring=d.responseText,b(c)):(console.log("Error loading:"+a),sstring=""))},d.send(null)}function myStringToTable(a){var b=/{/gi,c=sstring.replace(b,"").split("}"),d=document.getElementById(a);for(let b of c){var e,f=b.split(";"),g=d.insertRow(d.rows.lenght);for(e=0;e<f.length;e++)g.insertCell(e).innerHTML=f[e]}}function myTableDeleteRowsN(a,b){for(var c=document.getElementById(a);c.rows.length>b;)c.deleteRow(b)}function myStartTimer(a){setTimeout(myStopTimer,a)}function myStopTimer(){location.reload()}
 )=====";
 
 char page_configwifi[] PROGMEM = R"=====(
 <html><head><meta http-equiv="content-type" content="text/html; charset=UTF-8"></head>
-<script src="/functions.js"></script><script> var sstring = "";
-function cmdloadwifilist() {myLoadURLToString("/wifiliststring", myStringToListSSID);}
-function cmdloadrescan() {myLoadURLToString("/rescancmd", myAfterRescan);}
-function cmdloadwps(){myLoadURLToString("/wpscmd", myAfterRescan);}
-function myStringToListSSID() {myTableDeleteRowsN("issidtable", 1); myStringToTable("issidtable"); var table = document.getElementById("issidtable");
-for (var r = 1; r < table.rows.length; r++) {var olds = table.rows[r].cells[0].innerHTML;table.rows[r].cells[0].innerHTML = olds + "<input type='radio' name='radio1' value='" + olds + "'>";}}
-function cmdchosessid() {var chssid = document.forms[1];
-for (let rr of chssid) {if (rr.checked) {document.getElementById("istaname").value = rr.value;}};}
-function myAfterRescan() {document.getElementById("irescantext").innerHTML = sstring; myStartTimer(15000);}
-function cmdsubmitsave(){var isok= true;if (document.getElementById("istaname").value.length > 32) {isok= false;alert("SSID name must be < 33");}
-if (document.getElementById("istapass").value.length > 64) {isok= false;alert("Password name must be < 65");}return isok;}</script>
+<script src="/functions.js"></script>
+<script>
+var sstring="";function cmdloadwifilist(){myLoadURLToString("/wifiliststring",myStringToListSSID)}function cmdloadrescan(){myLoadURLToString("/rescancmd",myAfterRescan)}function cmdloadwps(){myLoadURLToString("/wpscmd",myAfterRescan)}function myStringToListSSID(){myTableDeleteRowsN("issidtable",1),myStringToTable("issidtable");for(var a,b=document.getElementById("issidtable"),c=1;c<b.rows.length;c++)a=b.rows[c].cells[0].innerHTML,b.rows[c].cells[0].innerHTML=a+"<input type='radio' name='radio1' value='"+a+"'>"}function cmdchosessid(){var a=document.forms[1];for(let b of a)b.checked&&(document.getElementById("istaname").value=b.value)}function myAfterRescan(){document.getElementById("irescantext").innerHTML=sstring,myStartTimer(15e3)}function cmdsubmitsave(){var a=!0;return 32<document.getElementById("istaname").value.length&&(a=!1,alert("SSID name must be < 33")),64<document.getElementById("istapass").value.length&&(a=!1,alert("Password name must be < 65")),a}
+</script>
 <body onload="cmdloadwifilist()"><H2 style="text-align: center">WiFi connection configuration:</H2>
 <form id="isaveform" method="post" action="/cfgwifisave" onsubmit="return cmdsubmitsave()" style="background-color:#CCFFCC; text-align:center">
 <p><b>Standalone AP<input type='radio' name='wlanmode' value='AP'></b><br><sup>Default Web IP: 192.168.4.1<sup></p><p><b>Connect to STA<input type='radio' name='wlanmode' value='STA' checked></b></p>
@@ -90,59 +73,13 @@ char page_configtree[] PROGMEM = R"=====(
 char page_show[] PROGMEM = R"=====(
 <html><head><meta http-equiv="content-type" content="text/html; charset=UTF-8"></head><script src="/functions.js"></script>
 <script>
-var sstring = "";
-var wsSocket;
-var ledbuffer = [];
-var numleds = 0;
-var ledno = 0;
-var PFbuffer = [];
-function addToPFbuffer(strpf) {var ipf = parseInt(strpf, 10);var mxwidth = (document.getElementById("ipfdrawer").width - 10) / 5;
-if (PFbuffer.length == mxwidth) {
-PFbuffer.shift();
-PFbuffer.push(ipf);}
-else if (PFbuffer.length < mxwidth) {PFbuffer.push(ipf);}
-else {PFbuffer.push(ipf);while (PFbuffer.length > mxwidth) { PFbuffer.shift(); };}};
-function myDrawPF() {
-document.getElementById("ipfdrawer").width = document.documentElement.clientWidth - 10;
-var canvas = document.getElementById("ipfdrawer");var ctx = canvas.getContext("2d");var lw = canvas.width / PFbuffer.length;ctx.fillRect(0, 0, canvas.width, 1);
-for (var x = 0; x < PFbuffer.length; x++) {
-var r = 255 - PFbuffer[x];var g = 54 + PFbuffer[x] * 2;var b = 128 - PFbuffer[x];var fs = "#" + r.toString(16) + g.toString(16) + b.toString(16);
-ctx.fillStyle = fs;ctx.fillRect(lw * x, canvas.height - PFbuffer[x], lw, canvas.height);}
-ctx.fillRect(0, 50, canvas.width, 1);
-ctx.fillStyle = "#000000";
-ctx.fillText("Powerfactor", 0, 50);};
-function myDrawLeds() {document.getElementById("ileddrawer").width = document.documentElement.clientWidth - 10;
-var canvas = document.getElementById("ileddrawer");var ctx = canvas.getContext("2d");var lw = canvas.width / ledbuffer.length;for (var i = 0; i < ledbuffer.length; i++) {
-var fs = "#" + ledbuffer[i];ctx.fillStyle = fs;ctx.fillRect(lw * i, 0, lw, canvas.height);}};
-function myStartPage() {addToPFbuffer("100");myDrawPF();myDrawLeds();myInitWS();cmdloadeffectlist();};
-function cmdloadeffectlist() {myLoadURLToString("/effectliststring", myStringToListEffect);};
-function myStringToListEffect() {myTableDeleteRowsN("iefftable", 1);myStringToTable("iefftable");var table = document.getElementById("iefftable");
-for (var r = 1; r < table.rows.length; r++) {var olds = table.rows[r].cells[0].innerHTML;if (olds.length > 0) { table.rows[r].cells[0].innerHTML = "<input type='radio' name='radio1' value='" + olds + "'>" + olds; }}};
-function myProcessWS(payload) {
-if (payload.substr(0, 1) == "!") {if (payload.substr(1, 1) == "#") {var table = document.getElementById("iefftable");
-for (var r = 1; r < table.rows.length; r++) {if ((r - 1) == payload.substr(2)) { table.rows[r].style.fontWeight = "bold"; }
-else { table.rows[r].style.fontWeight = "normal"; }}}
-else if (payload.substr(1, 1) == "f") {
-document.getElementById("ipowerfact").innerHTML = "Power factor:" + payload.substr(2) + " %";
-addToPFbuffer(payload.substr(2));myDrawPF();}
-else if (payload.substr(1, 1) == "p") {document.getElementById("ipowerneed").innerHTML = "Power need:" + payload.substr(2) + " mA";}
-else if (payload.substr(1, 1) == "t") {document.getElementById("itasktime").innerHTML = "Effect&WSuptade time:" + payload.substr(2) + " msec";}
-else if (payload.substr(1, 1) == "r") {var irts = parseInt(payload.substr(2), 10);document.getElementById("iruntime").innerHTML = "Runtime:" + irts + " sec";}
-else if (payload.substr(1, 1) == "L") {numleds = payload.substr(2);if (ledbuffer.length < numleds) {for (var i = 0; i < numleds; i++) ledbuffer[i] = "FFFFFF";};
-}else if (payload.substr(1, 1) == "N") {ledno = payload.substr(2);console.log("LED no: " + ledno);}}
-else if (payload.substr(0, 1) == "*") {var ssled = payload.substr(1);if (ledno >= numleds) ledno = 0;ledbuffer[ledno] = ssled;ledno++;};myDrawLeds();};
-function myInitWS() {wsSocket = new WebSocket("ws://" + window.location.hostname + ":81/");
-wsSocket.onmessage = function (event) {document.getElementById("iwsconsole").value = event.data;myProcessWS(event.data);}
-wsSocket.onerror = function (event) {alert("WebSocket error observed:" + event);}
-wsSocket.onclose = function (event) {alert("WebSocket closed");}};
-function cmdchoseeff() {
-var chssid = document.forms[0];for (let rr of chssid) {if (rr.checked) {wsSocket.send("!#" + rr.value);}}};
-function cmdpreviewleds() {wsSocket.send("!p");};
+var wsSocket,sstring="",ledbuffer=[],numleds=0,ledno=0,PFbuffer=[],rdata=!1;function addToPFbuffer(a){var b=parseInt(a,10),c=(document.getElementById("ipfdrawer").width-10)/5;if(PFbuffer.length==c)PFbuffer.shift(),PFbuffer.push(b);else if(PFbuffer.length<c)PFbuffer.push(b);else for(PFbuffer.push(b);PFbuffer.length>c;)PFbuffer.shift()}function myDrawPF(){document.getElementById("ipfdrawer").width=document.documentElement.clientWidth-10;var a=document.getElementById("ipfdrawer"),c=a.getContext("2d"),d=a.width/PFbuffer.length;c.fillRect(0,0,a.width,1);for(var e=0;e<PFbuffer.length;e++){var f=255-PFbuffer[e],h=54+2*PFbuffer[e],g=128-PFbuffer[e],b="#"+f.toString(16)+h.toString(16)+g.toString(16);c.fillStyle=b,c.fillRect(d*e,a.height-PFbuffer[e],d,a.height)}c.fillRect(0,50,a.width,1),c.fillStyle="#000000",c.fillText("Powerfactor",0,50)}function myDrawLeds(){document.getElementById("ileddrawer").width=document.documentElement.clientWidth-10;for(var a,b=document.getElementById("ileddrawer"),c=b.getContext("2d"),d=b.width/ledbuffer.length,e=0;e<ledbuffer.length;e++)a="#"+ledbuffer[e],c.fillStyle=a,c.fillRect(d*e,0,d,b.height)}function myStartPage(){addToPFbuffer("100"),myDrawPF(),myDrawLeds(),myInitWS(),cmdloadeffectlist()}function cmdloadeffectlist(){myLoadURLToString("/effectliststring",myStringToListEffect)}function myStringToListEffect(){myTableDeleteRowsN("iefftable",1),myStringToTable("iefftable");for(var a,b=document.getElementById("iefftable"),c=1;c<b.rows.length;c++)a=b.rows[c].cells[0].innerHTML,0<a.length&&(b.rows[c].cells[0].innerHTML="<input type='radio' name='radio1' value='"+a+"'>"+a);wsSocket.send("!!"),rdata=!0}function myProcessWS(a){if("!"==a.substr(0,1)){if("#"==a.substr(1,1))for(var b=document.getElementById("iefftable"),c=1;c<b.rows.length;c++)b.rows[c].style.fontWeight=c-1==a.substr(2)?"bold":"normal";else if("f"==a.substr(1,1))document.getElementById("ipowerfact").innerHTML="Power factor:"+a.substr(2)+" %",addToPFbuffer(a.substr(2)),myDrawPF();else if("p"==a.substr(1,1))document.getElementById("ipowerneed").innerHTML="Power need:"+a.substr(2)+" mA";else if("t"==a.substr(1,1))document.getElementById("itasktime").innerHTML="Effect&WSuptade time:"+a.substr(2)+" msec";else if("r"==a.substr(1,1)){var d=parseInt(a.substr(2),10);document.getElementById("iruntime").innerHTML="Runtime:"+d+"sec"}else if("L"!=a.substr(1,1))"N"==a.substr(1,1)&&(ledno=a.substr(2),console.log("LED no: "+ledno));else if(numleds=a.substr(2),ledbuffer.length<numleds)for(var e=0;e<numleds;e++)ledbuffer[e]="FFFFFF";}else if("*"==a.substr(0,1)){var f=a.substr(1);ledno>=numleds&&(ledno=0),ledbuffer[ledno]=f,ledno++}myDrawLeds()}function myInitWS(){wsSocket=new WebSocket("ws://"+window.location.hostname+":81/"),wsSocket.onmessage=function(a){document.getElementById("iwsconsole").value=a.data,myProcessWS(a.data)},wsSocket.onerror=function(a){alert("WebSocket error observed:"+a)},wsSocket.onclose=function(){alert("WebSocket closed")}}function cmdchoseeff(){var a=document.forms[0];for(let b of a)b.checked&&wsSocket.send("!#"+b.value)}function cmdpreviewleds(){wsSocket.send("!p")}function cmdpausedata(){rdata?wsSocket.send("!s"):wsSocket.send("!!"),rdata=!rdata}
 </script>
-<body onload="myStartPage()"><H2 style="text-align: center">Select effect:</H2><div style="background:navajowhite;"><form id="iefflist" onchange="cmdchoseeff()" style="margin-left:10%"><table id="iefftable" style="text-align: left; width: 80%; font-size: large">
-<tr style="font-weight: bold;"><td style="width: 5%">No:</td><td style="width: 50%">Effect Name:</td></tr></table></form></div><hr><table style="background:lemonchiffon; width: 100%;"><tr><td id="ipowerneed">1</td><td id="itasktime">2</td></tr><tr><td id="ipowerfact">1</td><td id="iruntime">2</td></tr></table>
-<canvas width="600" height="100" id="ipfdrawer"></canvas><hr><canvas width="600" height="10" id="ileddrawer"></canvas><br><br><button onclick="cmdpreviewleds()">Preview LEDs</button><hr><div><samp><b>WebSocket debug:</b><br><textarea id="iwsconsole" style="width: 20vw; height: 10vh;"></textarea>
-</samp></div></body>
+<body onload="myStartPage()">
+<H2 style="text-align: center">Select effect:</H2><div style="background:navajowhite;"><form id="iefflist" onchange="cmdchoseeff()" style="margin-left:10%"><table id="iefftable" style="text-align: left; width: 80%; font-size: large"><tr style="font-weight: bold;"><td style="width: 5%">No:</td><td style="width: 50%">Effect Name:</td></tr></table></form></div>
+<hr><button onclick="cmdpausedata()" style="float: right;">Pause/start data</button><table style="background:lemonchiffon; width: 100%;"><tr><td id="ipowerneed">1</td><td id="itasktime">2</td>
+</tr><tr><td id="ipowerfact">1</td><td id="iruntime">2</td></tr></table><canvas width="600" height="100" id="ipfdrawer"></canvas>
+<hr><button onclick="cmdpreviewleds()" style="float: right;">Preview LEDs</button><br><canvas width="600" height="20" id="ileddrawer"></canvas><br><hr><div><samp><b>WebSocket debug:</b><br><textarea id="iwsconsole" style="width: 20vw; height: 10vh;"></textarea></samp></div></body>
 </html>
   )=====";
 #endif

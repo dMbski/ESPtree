@@ -19,33 +19,36 @@ void PixEffect(u8_t effno); //processing effects
 //external declarations
 extern un_color32 *PixBuffer;
 extern uint16_t PixBuffCount;
+extern struct_xmas_config Xmas;
 
 // definitions
 #define HUE_RES 3 //resolution for huetorgb conversion 0=<hue<(360*hue_res)
 #define HUE_MAX (HUE_RES * 360)
 
-#define EFFECTS_COUNT 10
-#define EFF_TESTRGB 0
-#define EFF_RAINBOW 1
-#define EFF_BLUE_SP 2
-#define EFF_RED_SP 3
-#define EFF_RAINBOW_SP 4
-#define EFF_RIB_RAND 5
+#define EFFECTS_COUNT   11
+#define EFF_TESTRGB     0
+#define EFF_RAINBOW     1
+#define EFF_BLUE_SP     2
+#define EFF_RED_SP      3
+#define EFF_RAINBOW_SP  4
+#define EFF_RIB_RAND    5
 #define EFF_TWO_RAINBOW 6
-#define EFF_TWO_RG 7
-#define EFF_TWO_COMETS 8
-#define EFF_COMET_RAND 9
+#define EFF_TWO_RG      7
+#define EFF_TWO_COMETS  8
+#define EFF_COMET_RAND  9
+#define EFF_MPOINTS 10
 
 #define EFF0_NAME F("Slow Color check (R R R G G B)")
 #define EFF1_NAME F("Scrolled down rainbow")
-#define EFF2_NAME F("Wet blue commet with sparkles")
+#define EFF2_NAME F("Wet blue comet with sparkles")
 #define EFF3_NAME F("Red glowing heat")
 #define EFF4_NAME F("Random sparkle rainbow")
-#define EFF5_NAME F("Scrolled random ribbon")
+#define EFF5_NAME F("Random ribbons")
 #define EFF6_NAME F("Two point rainbow")
 #define EFF7_NAME F("Two point (Red Green)")
 #define EFF8_NAME F("Two comets")
 #define EFF9_NAME F("Random comet")
+#define EFF10_NAME F("Middle points rainbow")
 
 String EffectName(uint8_t no)
 {
@@ -69,6 +72,8 @@ String EffectName(uint8_t no)
     return (EFF8_NAME);
   if (no == 9)
     return (EFF9_NAME);
+  if (no == 10)
+    return (EFF10_NAME);    
   return "";
 };
 
@@ -127,7 +132,7 @@ void PixEffect(u8_t effno)
   case EFF_BLUE_SP:
     fase = random(25);
     PixFade(fase / 2);
-    currcol32 = PixColor32(0, 0, 50 + random(180));
+    currcol32 = random(COL_BLUE);
     for (int i = 0; i < fase; i++)
     {
       PixSet(lastled + random(fase), currcol32);
@@ -137,11 +142,12 @@ void PixEffect(u8_t effno)
       PixSparkle(1, COL_WHITE);
     break; //end EFF_BLUE_SP
   case EFF_RED_SP:
-    fase= random(PixBuffCount/4);
-    PixFade(fase/3);
+    fase = random(PixBuffCount / 4);
+    PixFade(fase / 3);
     currcol32 = PixColor32(random(255), 0, 0);
     PixSparkle(fase, currcol32);
-    if (!(fase % 4)) PixSparkle(1, COL_YELOW);
+    if (!(fase % 4))
+      PixSparkle(1, COL_YELOW);
     break; //end EFF_RED_SP
   case EFF_RAINBOW_SP:
     if (lastcol32 >= HUE_MAX)
@@ -151,17 +157,22 @@ void PixEffect(u8_t effno)
     PixSparkle(fase, HueToRGB32(lastcol32++, 255, 200));
     break; //end EFF_RAINBOW_SP
   case EFF_RIB_RAND:
+    if (lasteffect != effno)
+    {
+      lastled = 0;
+    }
     if (lastled == 0)
     {
-      fase = 4 + random(PixBuffCount / 10);
-      lastcol32 = HueToRGB32(random(HUE_MAX), 255, 200);
-      PixSmooth();
+      lastcol32 = random(COL_WHITE);
+      fase = random(PixBuffCount / 5);
+      if (fase < 2)
+        fase = 1;
     }
-    for (currled = 0; currled < 3; currled++)
-    {
-      PixSet(lastled + currled *fase, lastcol32);
-      lastled++;
-    }
+    PixSet(lastled - 1, lastcol32);
+    PixSet(lastled + 1, lastcol32);
+    PixFade(1);
+    PixSet(lastled, lastcol32);
+    lastled = lastled + fase;
     break; //end EFF_RIB_RAND
   case EFF_TWO_RAINBOW:
     PixFade(lastled / 20);
@@ -213,6 +224,26 @@ void PixEffect(u8_t effno)
     }
     lastled--;
     break; //end EFF_COMET_RAND
+    case EFF_MPOINTS:
+    if (fase >= MAX_MIDDLEPOINTS)
+    {
+      fase= 0;
+      lastcol32++;
+      if (lastcol32>HUE_MAX) lastcol32=0;
+      PixFade(1);
+      colval= colval+direction;
+      if (colval> 200) direction= -1;
+      if (colval < 50) direction= 1;
+    }
+    for (uint16_t i=1; i< 10; i++)
+    {
+      currcol32= HueToRGB32(lastcol32*i, 255, colval);
+      PixSet(Xmas.Stripe1.MiddlePoints[fase]-i, currcol32);
+      PixSet(Xmas.Stripe1.MiddlePoints[fase]+i, currcol32);
+    }
+    PixSet(Xmas.Stripe1.MiddlePoints[fase], COL_RED);
+    fase++;
+    break; //end EFF_MPOINTS
   }
   lasteffect = effno;
 }

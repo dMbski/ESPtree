@@ -11,7 +11,7 @@
   var numleds = 0;
   var ledno = 0;
   var PFbuffer = [];
-
+  var rdata = false;
   function addToPFbuffer(strpf) {
     var ipf = parseInt(strpf, 10);
     var mxwidth = (document.getElementById("ipfdrawer").width - 10) / 5;
@@ -74,6 +74,8 @@
       var olds = table.rows[r].cells[0].innerHTML;
       if (olds.length > 0) { table.rows[r].cells[0].innerHTML = "<input type='radio' name='radio1' value='" + olds + "'>" + olds; }
     }
+    wsSocket.send("!!");
+    rdata = true;
   };
   function myProcessWS(payload) {
     if (payload.substr(0, 1) == "!") {
@@ -142,6 +144,11 @@
   function cmdpreviewleds() {
     wsSocket.send("!p");
   };
+  function cmdpausedata() {
+    if (rdata) wsSocket.send("!s");
+    else wsSocket.send("!!");
+    rdata= !rdata;
+  }
 </script>
 
 <body onload="myStartPage()">
@@ -157,6 +164,7 @@
     </form>
   </div>
   <hr>
+  <button onclick="cmdpausedata()" style="float: right;">Pause/start data</button>
   <table style="background:lemonchiffon; width: 100%;">
     <tr>
       <td id="ipowerneed">1</td>
@@ -169,8 +177,8 @@
   </table>
   <canvas width="600" height="100" id="ipfdrawer"></canvas>
   <hr>
-  <canvas width="600" height="10" id="ileddrawer"></canvas><br><br>
-  <button onclick="cmdpreviewleds()">Preview LEDs</button>
+  <button onclick="cmdpreviewleds()" style="float: right;">Preview LEDs</button><br>
+  <canvas width="600" height="20" id="ileddrawer"></canvas><br>
   <hr>
   <div>
     <samp><b>WebSocket debug:</b><br>

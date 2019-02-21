@@ -1,10 +1,10 @@
 # ESPtree
-another ESP8266 controller for neopixels strip, with WEB iterface and some cool features
+another ESP8266 controller for neopixels strip, with WEB interface and some cool features
 THIS IS **NOT COMPLETED**...barely tested 
 >big mess in source, *but yet usable* ;-)
 >
-><img width="300" src="https://github.com/dMbski/ESPtree/blob/master/screens/Schowek01.jpg" /> <img width="300" src="https://github.com/dMbski/ESPtree/blob/master/screens/Schowek02.jpg" />
-><img width="300" src="https://github.com/dMbski/ESPtree/blob/master/screens/Schowek03.jpg" /> <img width="300" src="https://github.com/dMbski/ESPtree/blob/master/screens/Schowek04.jpg" /><img width="300" src="https://github.com/dMbski/ESPtree/blob/master/screens/Schowek05.jpg" />
+><img width="300" src="https://github.com/dMbski/ESPtree/blob/master/screens/Schowek01.jpg" /> <img height="400" src="https://github.com/dMbski/ESPtree/blob/master/screens/Schowek02.jpg" /><img width="300" src="https://github.com/dMbski/ESPtree/blob/master/screens/Schowek03.jpg" />
+><img width="300" src="https://github.com/dMbski/ESPtree/blob/master/screens/Schowek04.jpg" /><img width="300" src="https://github.com/dMbski/ESPtree/blob/master/screens/Schowek05.jpg" />
 
 #### Use library Adafruit or NeoPixelBus. 
 Select library in file helpers.cpp. With *Adafruit NeoPixel* library, **pin and quantity of leds** are changable at runtime via WEB.

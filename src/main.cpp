@@ -33,6 +33,7 @@ extern char page_restartpage1[];
 extern char page_restartpage2[];
 extern char page_configtree[];
 extern char page_show[];
+extern char page_configshow[];
 //functions definitions
 String EncryptionToStr(uint8_t enctype);
 void xmas_resetconfig();
@@ -194,7 +195,7 @@ void loop()
     Task_Effect();
     Enter_TaskEffect = millis() + PERIOD_TASK_EFFECT;
   };
-  if (millis() > Enter_TaskUpdateWS)
+  if ((millis() > Enter_TaskUpdateWS) && (WlanStatus < WLAN_ESP_NOWIFI))
   {
     Task_UpdateWS();
     Enter_TaskUpdateWS = millis() + PERIOD_TASK_UPDATEWS;
@@ -212,12 +213,14 @@ void loop()
     TaskEffectprocTime = (TaskEffectProcTimeMax + TaskEffectprocTime) / 2 + TaskEffectUpdTimeMax;
     SERIALPRINTD("\r\nMax Effect processing time:", TaskEffectProcTimeMax);
   }
-
-  ServerHTML.handleClient();
-  ServerWS.loop();
+  if (WlanStatus < WLAN_ESP_NOWIFI)
+  {
+    ServerHTML.handleClient();
+    ServerWS.loop();
 #ifdef USE_MDNS
-  MDNS.update();
+    MDNS.update();
 #endif
+  }
 }
 
 //------------------------------
@@ -722,6 +725,8 @@ void servers_handleWS(uint8_t num, WStype_t type, uint8_t *payload, size_t lengh
   SERIALPRINTD("\r\nHandle WS, lenght: ", lenght);
   if (type == WStype_TEXT)
   {
+    if (lenght < 2)
+      return;
     if (payload[0] == '!')
     { //maybe some commands
       if (payload[1] == '#')
@@ -866,21 +871,9 @@ void servers_handleInfoString()
   StrBuffer1.concat(Xmas.STAname);
   StrBuffer1.concat(F(";}{Standalone AP SSID:;<b>"));
   StrBuffer1.concat(Xmas.APname);
-  StrBuffer1.concat(F(";}{Standalone AP, disable WiFi:;<b>"));
-  StrBuffer1.concat(Xmas.APWifiTimeoutMs / 1000);
-  StrBuffer1.concat(F("</b>;sec}{Wifi mode:;"));
-  StrBuffer1.concat(Xmas.WifiMode);
-  StrBuffer1.concat(F(";"));
-  StrBuffer1.concat(WifiModeToStr(Xmas.WifiMode));
-  StrBuffer1.concat(F("}{OTA enable:;"));
-  StrBuffer1.concat(Xmas.OTAenable);
-  StrBuffer1.concat(F("}{Autochange Effect:;<b>"));
-  StrBuffer1.concat(Xmas.EffectTimeoutMs / 1000);
-  StrBuffer1.concat(F("</b>;sec}{Default Effect:;"));
-  StrBuffer1.concat(Xmas.EffectStartWith);
   //stripeinfo
 #ifdef USE_ADA_NEOPIXEL
-  StrBuffer1.concat(F(";}{Use Adafruit NeoPixel;Check details; below}"));
+  StrBuffer1.concat(F(";}{Use Adafruit NeoPixel;;}"));
 #else
   StrBuffer1.concat(F(";}{Use NeoPixelBus library;Pin and pixeltype changable in; source only.}"));
   StrBuffer1.concat(F("{Maximum Leds;"));
@@ -888,23 +881,8 @@ void servers_handleInfoString()
   StrBuffer1.concat(F(";}{Using pin no:;"));
   StrBuffer1.concat(NP_LEDPIN);
   StrBuffer1.concat(F(";changable in source only.}"));
-  StrBuffer1.concat(F("{<b>Below is used with;Adafruit library only.;Except number of LEDs</b>}"));
 #endif
-  StrBuffer1.concat(F("{Neopixel pin:;<b>"));
-  StrBuffer1.concat(Xmas.Stripe1.PinNo);
-  StrBuffer1.concat(F("</b>;}{Neopixel type:;"));
-  StrBuffer1.concat(NeoPixeltypeToStr(Xmas.Stripe1.neoPixelType));
-  StrBuffer1.concat(F(";}{Number of LEDs:;<b>"));
-  StrBuffer1.concat(Xmas.Stripe1.LedCounts);
-  StrBuffer1.concat(F("</b>;}{Amperage max:;<b>"));
-  StrBuffer1.concat(Xmas.Stripe1.AmperageMax);
-  StrBuffer1.concat(F("</b>;mA}{Middle points:;"));
-  for (uint16_t i = 0; i < MAX_MIDDLEPOINTS; i++)
-  {
-    StrBuffer1.concat(Xmas.Stripe1.MiddlePoints[i]);
-    StrBuffer1.concat(" ");
-  }
-  StrBuffer1.concat(F("}{Max Effect Processing Time:;"));
+  StrBuffer1.concat(F("{Max Effect Processing Time:;"));
   StrBuffer1.concat(TaskEffectProcTimeMax);
   StrBuffer1.concat(F(";msec}{Max Update Strip Time:;"));
   StrBuffer1.concat(TaskEffectUpdTimeMax);
@@ -934,10 +912,12 @@ void servers_handleEffListString()
   for (int i = 0; i < EFFECTS_COUNT; i++)
   {
     StrBuffer1.concat(F("{"));
+    StrBuffer1.concat(i + 1);
+    StrBuffer1.concat(F(";R;"));
     StrBuffer1.concat(i);
-    StrBuffer1.concat(F(";"));
+    StrBuffer1.concat(F(";radeff;"));
     StrBuffer1.concat(EffectName(i));
-    StrBuffer1.concat(F("}"));
+    StrBuffer1.concat(";}");
   }
 
   SERIALPRINTD("\r\nSending bytes: ", StrBuffer1.length());
@@ -945,6 +925,35 @@ void servers_handleEffListString()
   SERIALPRINTD("\r\nSend:", StrBuffer1);
   StrBuffer1 = "";
 }
+//--------
+void servers_handleConfigShowString()
+{
+  SERIALPRINTF("\r\nHandle ConfigShowString."); //-----------------
+  StrBuffer1 = "{Number of LEDs;T;";
+  StrBuffer1.concat(Xmas.Stripe1.LedCounts);
+  StrBuffer1.concat(F("}{Middle points settings;T;From bottom-0 to top}"));
+  uint16_t lstpoint = 0;
+  for (int i = 0; i < MAX_MIDDLEPOINTS; i++)
+  {
+    StrBuffer1.concat(F("{Point "));
+    StrBuffer1.concat(i);
+    StrBuffer1.concat(F(";N;"));
+    StrBuffer1.concat(Xmas.Stripe1.MiddlePoints[i]);
+    StrBuffer1.concat(F(";midp"));
+    StrBuffer1.concat(i);
+    StrBuffer1.concat(";");
+    StrBuffer1.concat(lstpoint);
+    StrBuffer1.concat(";");
+    StrBuffer1.concat(Xmas.Stripe1.LedCounts - 1);
+    StrBuffer1.concat("}");
+    lstpoint = Xmas.Stripe1.MiddlePoints[i];
+  }
+  SERIALPRINTD("\r\nSending bytes: ", StrBuffer1.length());
+  ServerHTML.send(200, "text/plain", StrBuffer1);
+  SERIALPRINTD("\r\nSend:", StrBuffer1);
+  StrBuffer1 = "";
+}
+
 //--------
 void servers_handleWifiRescan()
 {
@@ -964,6 +973,14 @@ void servers_handleRestartESP()
   ServerHTML.send_P(200, "text/html", page_restartpage2);
   WlanStatus = WLAN_ESP_RESTART;
 }
+//--------
+void servers_handleSaveRestESP()
+{
+  SERIALPRINTF("\r\nHandle SaveRestESP.");
+  xmas_writeconfig(Xmas.WifiMode);
+  servers_handleRestartESP();
+}
+//--------
 void servers_handleWPS()
 {
   SERIALPRINTF("\r\nHandle WPScmd.");
@@ -979,11 +996,66 @@ void servers_handleWPS()
   StrBuffer1 = "";
 }
 //--------
+void servers_handleConfigListString()
+{
+  SERIALPRINTF("\r\nHandle ConfigListString.");
+  StrBuffer1 = F("{Xmas ver;T;");
+  StrBuffer1.concat(XMAS_VER);
+  StrBuffer1.concat(F("}{Standalone AP name;C;"));
+  StrBuffer1.concat(Xmas.APname);
+  StrBuffer1.concat(F(";apname;5;32}{Standalone, shutdown WiFi (sec);N;"));
+  StrBuffer1.concat(Xmas.APWifiTimeoutMs / 1000);
+  StrBuffer1.concat(F(";apwifioff;200;9999}{OTA enable;B;"));
+  StrBuffer1.concat(Xmas.OTAenable);
+  StrBuffer1.concat(F(";otaenable}{Autochange effect (sec);N;"));
+  StrBuffer1.concat(Xmas.EffectTimeoutMs / 1000);
+  StrBuffer1.concat(F(";autoeffect;0;3600}{Number of LEDs;N;"));
+  StrBuffer1.concat(Xmas.Stripe1.LedCounts);
+  StrBuffer1.concat(F(";ledcounts;10;250}{Maximum Amperage (mA);N;"));
+  StrBuffer1.concat(Xmas.Stripe1.AmperageMax);
+  StrBuffer1.concat(F(";ampmax;60;15000}{Used only with;T;Adafruit library}"));
+  StrBuffer1.concat(F("{Neopixel GPIO pin;N;"));
+  StrBuffer1.concat(Xmas.Stripe1.PinNo);
+  StrBuffer1.concat(F(";pinno;1;16}"));
+  StrBuffer1.concat(F("{Neopixel Type;R;6;neopixeltype;NEO_RGB;1}"));
+  StrBuffer1.concat(F("{Neopixel Type;R;9;neopixeltype;NEO_RBG;0}"));
+  StrBuffer1.concat(F("{Neopixel Type;R;82;neopixeltype;NEO_GRB;0}"));
+  StrBuffer1.concat(F("{Neopixel Type;R;161;neopixeltype;NEO_GBR;0}"));
+  StrBuffer1.concat(F("{Neopixel Type;R;88;neopixeltype;NEO_BRG;0}"));
+  StrBuffer1.concat(F("{Neopixel Type;R;164;neopixeltype;NEO_BGR;0}"));
+  SERIALPRINTD("\r\nSending bytes: ", StrBuffer1.length());
+  ServerHTML.send(200, "text/plain", StrBuffer1);
+  SERIALPRINTD("\r\nSend:", StrBuffer1);
+  StrBuffer1 = "";
+}
+//--------
+void servers_handleConfigShowSave()
+{
+  SERIALPRINTF("\r\nHandle ConfigShowSave");
+  String n = "";
+  for (int i = 0; i < ServerHTML.args(); i++)
+  {
+    for (int p = 0; p < MAX_MIDDLEPOINTS; p++)
+    {
+      n = F("midp");
+      n.concat(p);
+      if (ServerHTML.argName(i) == n)
+      {
+        Xmas.Stripe1.MiddlePoints[p]= uint16_t(ServerHTML.arg(i).toInt());
+        SERIALPRINTD("\r\nSet midpoint ", p);
+        SERIALPRINTD(" = ", Xmas.Stripe1.MiddlePoints[p]);
+      } 
+    }
+  }
+  ChangeEffect(EFF_MPOINTS);
+  ServerHTML.send_P(200, "text/html", page_configshow);
+}
+//--------
 void servers_handleCfgTree1Save()
 {
   SERIALPRINTF("\r\nHandle cfgtree1save");
   boolean ch = false;
-  for (uint8_t i = 0; i < ServerHTML.args(); i++)
+  for (int i = 0; i < ServerHTML.args(); i++)
   {
     if (ServerHTML.argName(i) == "apname")
     {
@@ -1007,22 +1079,6 @@ void servers_handleCfgTree1Save()
       Xmas.EffectTimeoutMs = 1000 * uint32_t(ServerHTML.arg(i).toInt());
       ch = true;
     }
-  };
-  if (ch)
-  {
-    xmas_writeconfig(Xmas.WifiMode);
-    ServerHTML.send_P(200, "text/html", page_restartpage1);
-  }
-  else
-    ServerHTML.send(200, "text/plain", F("Not Saved!"));
-}
-//--------
-void servers_handleCfgTree2Save()
-{
-  SERIALPRINTF("\r\nHandle cfgtree2save");
-  boolean ch = false;
-  for (uint8_t i = 0; i < ServerHTML.args(); i++)
-  {
     if (ServerHTML.argName(i) == "pinno")
     {
       Xmas.Stripe1.PinNo = u8_t(ServerHTML.arg(i).toInt());
@@ -1066,12 +1122,17 @@ void servers_config() //setting up on events
   ServerHTML.on("/infopage", []() { ServerHTML.send_P(200, "text/html", page_infopage); });
   ServerHTML.on("/functions.js", []() { ServerHTML.send_P(200, "application/javascript", page_functions); });
   ServerHTML.on("/configtree", []() { ServerHTML.send_P(200, "text/html", page_configtree); });
+  ServerHTML.on("/configliststring", HTTP_GET, servers_handleConfigListString);
   ServerHTML.on("/rescancmd", HTTP_GET, servers_handleWifiRescan);
   ServerHTML.on("/restartcmd", HTTP_GET, servers_handleRestartESP);
+  ServerHTML.on("/saverestarcmd", HTTP_POST, servers_handleSaveRestESP);
   ServerHTML.on("/wpscmd", HTTP_GET, servers_handleWPS);
   ServerHTML.on("/cfgtree1save", HTTP_POST, servers_handleCfgTree1Save);
-  ServerHTML.on("/cfgtree2save", HTTP_POST, servers_handleCfgTree2Save);
   ServerHTML.on("/cfgwifisave", HTTP_POST, servers_handleCfgWifiSave);
+  ServerHTML.on("/configshow", []() { ServerHTML.send_P(200, "text/html", page_configshow); });
+  ServerHTML.on("/configshowsave", HTTP_POST, servers_handleConfigShowSave);
+  ServerHTML.on("/configshowstring", HTTP_GET, servers_handleConfigShowString);
+  //ServerHTML.on("/cfgshowsave", HTTP_POST, servers_handleCfgWifiSave);
   ServerHTML.onNotFound(servers_handleNotFound);
 
   if (Xmas.OTAenable)

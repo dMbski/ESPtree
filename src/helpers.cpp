@@ -171,6 +171,5 @@ struct struct_xmas_config
     uint32_t EffectTimeoutMs;
     u8_t EffectStartWith;
     struct_xmas_stripe Stripe1;
-};
-//extern xmas_config Xmas;
+}; //extern xmas_config Xmas;
 #endif

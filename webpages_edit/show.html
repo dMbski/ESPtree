@@ -69,11 +69,7 @@
   function myStringToListEffect() {
     myTableDeleteRowsN("iefftable", 1);
     myStringToTable("iefftable");
-    var table = document.getElementById("iefftable");
-    for (var r = 1; r < table.rows.length; r++) {
-      var olds = table.rows[r].cells[0].innerHTML;
-      if (olds.length > 0) { table.rows[r].cells[0].innerHTML = "<input type='radio' name='radio1' value='" + olds + "'>" + olds; }
-    }
+    myConvertTableToInputs("iefftable");
     wsSocket.send("!!");
     rdata = true;
   };

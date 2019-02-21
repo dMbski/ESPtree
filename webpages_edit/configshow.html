@@ -1,0 +1,55 @@
+<html>
+
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+</head>
+<script src="/functions.js"></script>
+<script>
+    var sstring = "";
+    function updatetable() {
+        myTableDeleteRowsN("iopttable", 1);
+        myStringToTable("iopttable");
+        myConvertTableToInputs("iopttable");
+    }
+    function Runthis() {
+        myLoadURLToString("/configshowstring", updatetable);
+    }
+    function checkmidpoints() {
+        var lastval = 0;
+        for (var n = 0; n < 25; n++) {
+            var idelem = "imidp" + n;
+            var elem = document.getElementById(idelem);
+            if (elem != null) {
+                elem.min = lastval;
+                lastval = elem.value;
+            }
+        }
+    }
+</script>
+
+<body onload="Runthis()">
+    <H2 style="text-align: center">Config show:</H2>
+    <form method="POST" action="/configshowsave" style="background: khaki" onchange="checkmidpoints()">
+        <table id="iopttable" style="width: 100%; float: right;">
+            <tr style="font-weight: bold;">
+                <td>Parameter name</td>
+                <td>Value</td>
+            </tr>
+            <tr>
+                <td></td>
+                <td></td>
+            </tr>
+        </table>
+        <div style="text-align: center">
+            <input type="reset" value="Clear">_____<input type="submit" value="Save">
+            <br><sup>Save, just sends new values to ESP for preview, to save them to eeprom click button below.</sup>
+        </div>
+    </form>
+
+    <form method="POST" style="background: darkkhaki; text-align: right;"><br>
+        <button formaction="/saverestarcmd">Save to EEPROM and restart</button><br><br>
+
+    </form>
+</body>
+
+</html>

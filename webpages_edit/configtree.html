@@ -4,69 +4,37 @@
 	<meta http-equiv="content-type" content="text/html; charset=UTF-8">
 </head>
 <script src="/functions.js"></script>
-
-<body>
+<script>
+	var sstring = "{LED quantity;T;100}";
+	function updatetable() {
+		myTableDeleteRowsN("iparamtab", 1);
+		myStringToTable("iparamtab");
+		myConvertTableToInputs("iparamtab");
+	}
+	function Runthis() {
+		myLoadURLToString("/configliststring", updatetable);
+	}
+</script>
+<body onload="Runthis()">
 	<H2 style="text-align: center">ESP tree configuration:</H2>
-	<div style="text-align: center; font-size: small">This page does not load actual values!<br>For these, See table at
-		bottom.</div><br>
 	<div style="background-color: #CCFFFF">
 		<br>
-		<form method="post" action="/cfgtree1save" style="background-color: #00FFFF; width: 90%; left:5%;position:relative">
-			<table style="width: 100%;">
+		<form method="POST" action="/cfgtree1save" style="background-color:skyblue ; width: 90%; left:5%;position:relative">
+			<table style="width: 100%;" id="iparamtab">
 				<tr>
-					<td style="width: 20%">Standalone AP name</td>
-					<td><input name="apname" size="32" style="width: 100%" type="text" value="XMAS_TREE_AP"></td>
+					<th style="width: 30vw">Parameter</th>
+					<th style="text-align: left">Value</th>
 				</tr>
 				<tr>
-					<td>OTA enable</td>
-					<td>Enable<input name="otaenable" type="radio" value="1">Disable<input checked name="otaenable" type="radio" value="0"></td>
-				</tr>
-				<tr>
-					<td>AP mode, shutdown WIFI after</td>
-					<td><input name="apwifioff" style="width: 15%" type="number" value="300" min="300" max="43200">sec</td>
-				</tr>
-				<tr>
-					<td>Autochange Effect<br><sup>0 disable</sup></td>
-					<td><input name="autoeffect" style="width: 15%" type="number" value="180" min="60" max="3600">sec</td>
-				</tr>								
-			</table>
-			<br>
-			<input type="reset" value="Clear">_____<input type="submit" value="Save">
-		</form><br>
-		<b>Neopixel Stripe configuration:</b>
-		<form method="post" action="/cfgtree2save" style="background-color:skyblue ; width: 90%; left:5%;position:relative">
-			<table style="width: 100%;">
-				<tr>
-					<td style="width: 20%">Neopixel pin<br><sup>Ensure right pin</sup></td>
-					<td><input name="pinno" style="width: 15%" type="number" value="1" min="1" max="16"></td>
-				</tr>
-				<tr>
-					<td>Neopixel type<br><sup>Right collor assigment</sup></td>
-					<td><select name="neopixeltype" style="width: 15%">
-							<option value="6">NEO_RGB</option>
-							<option value="9">NEO_RBG</option>
-							<option value="82">NEO_GRB</option>
-							<option value="161">NEO_GBR</option>
-							<option value="88">NEO_BRG</option>
-							<option value="164">NEO_BGR</option>
-						</select></td>
-				</tr>
-				<tr>
-					<td>Number of LEDs<br><sup>Works best to 200, check update time.</sup></td>
-					<td><input name="ledcounts" style="width: 15%" type="number" value="50" min="2" max="300"></td>
-				</tr>
-				<tr>
-					<td>Maximum Amperage</td>
-					<td><input name="ampmax" style="width: 15%" type="number" value="500" min="20" max="60000">mA</td>
+					<td></td>
+					<td></td>
 				</tr>
 			</table>
 			<br>
 			<input type="reset" value="Clear">_____<input type="submit" value="Save">
 		</form>
+		<br>
 	</div>
-	<iframe src="/infopage" id="iframed" name="framed" seamless width="100%" height="100%" style="border: turquoise">Click
-		on button from
-		menu to proceed.</iframe>
 	<div style="text-align: center">Restart ESP<a href="/restartcmd">&#8635;</a><br>Upgrade firmware<a href="/firmware">&#8685;</a></div>
 </body>
 

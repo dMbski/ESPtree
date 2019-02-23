@@ -6,7 +6,7 @@ THIS IS **NOT COMPLETED**...barely tested
 ><img width="300" src="https://github.com/dMbski/ESPtree/blob/master/screens/Schowek01.jpg" /> <img height="400" src="https://github.com/dMbski/ESPtree/blob/master/screens/Schowek02.jpg" /><img width="300" src="https://github.com/dMbski/ESPtree/blob/master/screens/Schowek03.jpg" />
 ><img width="300" src="https://github.com/dMbski/ESPtree/blob/master/screens/Schowek04.jpg" /><img width="300" src="https://github.com/dMbski/ESPtree/blob/master/screens/Schowek05.jpg" />
 
-#### Use library Adafruit or NeoPixelBus or even SPI transfer (emulate 800kH). 
+#### Use library Adafruit or NeoPixelBus or even SPI transfer (emulate 800kHz 3.2MHz/4). 
 Select library in file helpers.cpp. 
 With *Adafruit NeoPixel* library, **pin, quantity and color type of leds** are changable at runtime via WEB.
 

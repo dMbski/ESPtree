@@ -9,12 +9,14 @@
 #include <EEPROM.h>
 #include "helpers.cpp"
 #include "ledeffects.h"
-#ifdef USE_ADA_NEOPIXEL
+#if defined(USE_ADA_NEOPIXEL)
 #include <Adafruit_NeoPixel.h>
-#endif
-#ifdef USE_NEOPIXELBUS
+#elif defined(USE_NEOPIXELBUS)
 #include <NeoPixelBus.h>
+#elif defined(USE_SPITRANSFER)
+#include <SPI.h>
 #endif
+
 #ifdef USE_MDNS
 #include <ESP8266mDNS.h>
 #endif
@@ -61,12 +63,17 @@ WebSocketsServer ServerWS(SERVER_WS_PORT);
 #ifdef USE_OTA
 ESP8266HTTPUpdateServer ServerHttpOTA;
 #endif
-#ifdef USE_ADA_NEOPIXEL
+
+#if defined(USE_ADA_NEOPIXEL)
 Adafruit_NeoPixel *ALEDStrip1;
-#endif
-#ifdef USE_NEOPIXELBUS
+#elif defined(USE_NEOPIXELBUS)
 NeoPixelBus<NP_FEATURE, NP_METHOD> NPLEDStrip1(NP_LEDSCOUNTMAX, NP_LEDPIN);
+#elif defined(USE_SPITRANSFER)
+inline uint32_t setNibble(uint32_t innumber, uint32_t nibble, uint8_t nonibb);
+uint32_t byteToWSpacket(uint8_t b);
+void TaskUpdateSPI();
 #endif
+
 u8_t LEDStripIsDirty = false;
 
 un_color32 *PixBuffer;
@@ -113,23 +120,25 @@ void setup()
   {
     SERIALPRINTF("\r\nMagic or ver are different, reset config to default...");
     xmas_resetconfig();
-    //xmas_writeconfig(WIFI_MODE_AP); //write only on demand?
   }
   xmas_printcfg(&Xmas);
   servers_config();
   PixBuffCount = Xmas.Stripe1.LedCounts; //all leds from all strips
 
-#ifdef USE_ADA_NEOPIXEL
+#if defined(USE_ADA_NEOPIXEL)
   ALEDStrip1 = new Adafruit_NeoPixel(uint16_t(Xmas.Stripe1.LedCounts), uint8_t(Xmas.Stripe1.PinNo), neoPixelType(Xmas.Stripe1.neoPixelType));
   ALEDStrip1->begin();
   ALEDStrip1->clear();
   ALEDStrip1->show();
-#endif
-#ifdef USE_NEOPIXELBUS
+#elif defined(USE_NEOPIXELBUS)
   if (PixBuffCount > NP_LEDSCOUNTMAX)
     PixBuffCount = NP_LEDSCOUNTMAX;
   NPLEDStrip1.Begin();
   NPLEDStrip1.Show();
+#elif defined(USE_SPITRANSFER)
+  SPI.begin();
+  SPI.setFrequency(800000 * 4);
+  SPI.write32(0);
 #endif
 
   PixBuffer = new un_color32[PixBuffCount];
@@ -149,10 +158,12 @@ void loop()
   };
   if (LEDStripIsDirty) //update neopixel strip
   {
-#ifdef USE_ADA_NEOPIXEL
+#if defined(USE_ADA_NEOPIXEL)
     ALEDStrip1->show();
-#else
+#elif defined(USE_NEOPIXELBUS)
     NPLEDStrip1.Show();
+#elif defined(USE_SPITRANSFER)
+    TaskUpdateSPI();
 #endif
     LEDStripIsDirty = false;
   };
@@ -293,15 +304,92 @@ void xmas_printcfg(struct_xmas_config *cfg)
   SERIALPRINTD("\r\nStripe1.PinNo:", cfg->Stripe1.PinNo);
   SERIALPRINTD("\r\nStripe1.neoPixelType:", NeoPixeltypeToStr(cfg->Stripe1.neoPixelType));
   //TODO: add middlepoints
-#ifdef USE_NEOPIXELBUS
+#if defined(USE_NEOPIXELBUS)
   SERIALPRINTF("\r\nUse NeoPixelBus library. Check in source for details.");
   SERIALPRINTD("\r\nMaximum Leds count: ", NP_LEDSCOUNTMAX);
   SERIALPRINTD("\r\nUSing pin no: ", NP_LEDPIN);
-
-#else
+#elif defined(USE_SPITRANSFER)
+  SERIALPRINTF("\r\nUse SPI. Check source for details");
+  SERIALPRINTF("\r\nUsing pin MOSI-GPIO13 for dataout.");
+#elif defined(USE_ADA_NEOPIXEL)
   SERIALPRINTF("\r\nUse Adafruit NeoPixel library.");
 #endif
 }
+//----------------
+#ifdef USE_SPITRANSFER
+inline uint32_t setNibble(uint32_t innumber, uint32_t nibble, uint8_t nonibb)
+{
+  nibble = (nibble & 0xF) << (4 * nonibb);
+  innumber = innumber & ~(0xF << (4 * nonibb));
+  return (innumber | nibble);
+}
+//-----------------
+uint32_t byteToWSpacket(uint8_t b)
+{
+  uint32_t ret = 0;
+  for (int i = 0; i < 8; i++)
+  {
+    if (bitRead(b, i))
+      ret = setNibble(ret, 0b1110, i); //tune this
+    else
+      ret = setNibble(ret, 0b1000, i);
+  }
+  return ret;
+}
+//------------------
+void TaskUpdateSPI()
+{
+  uint32_t wspack[3];
+  un_color32 cc;
+  for (uint16_t i = 0; i < PixBuffCount; i++)
+  {
+    cc = PixBuffer[i];
+    if (TaskEffectPFStrip1 < 100)
+    {
+      cc.c8.r = (cc.c8.r * TaskEffectPFStrip1) / 100;
+      cc.c8.g = (cc.c8.g * TaskEffectPFStrip1) / 100;
+      cc.c8.b = (cc.c8.b * TaskEffectPFStrip1) / 100;
+    };    
+    switch (Xmas.Stripe1.neoPixelType)
+    {
+    case NEO_BGR:
+      wspack[0] = byteToWSpacket(cc.c8.b);
+      wspack[1] = byteToWSpacket(cc.c8.g);
+      wspack[2] = byteToWSpacket(cc.c8.r);
+      break;
+    case NEO_BRG:
+      wspack[0] = byteToWSpacket(cc.c8.b);
+      wspack[1] = byteToWSpacket(cc.c8.r);
+      wspack[2] = byteToWSpacket(cc.c8.g);
+      break;
+    case NEO_GBR:
+      wspack[0] = byteToWSpacket(cc.c8.g);
+      wspack[1] = byteToWSpacket(cc.c8.b);
+      wspack[2] = byteToWSpacket(cc.c8.r);
+      break;
+    case NEO_GRB:
+      wspack[0] = byteToWSpacket(cc.c8.g);
+      wspack[1] = byteToWSpacket(cc.c8.r);
+      wspack[2] = byteToWSpacket(cc.c8.b);
+      break;
+    case NEO_RBG:
+      wspack[0] = byteToWSpacket(cc.c8.r);
+      wspack[1] = byteToWSpacket(cc.c8.b);
+      wspack[2] = byteToWSpacket(cc.c8.g);
+      break;
+    default:
+      wspack[0] = byteToWSpacket(cc.c8.r);
+      wspack[1] = byteToWSpacket(cc.c8.g);
+      wspack[2] = byteToWSpacket(cc.c8.b);
+    }
+    //SPI.writeBytes((uint8_t *)&wspack[0], 3 * sizeof(uint32_t)); //flickers, need ossciloskope
+    SPI.write32(wspack[0]);
+    SPI.write32(wspack[1]);
+    SPI.write32(wspack[2]);
+  }
+  //SPI.write32(0);
+}
+#endif
 //----------------
 void Task_BufferToStrip()
 {
@@ -311,16 +399,17 @@ void Task_BufferToStrip()
   {
     cc = PixBuffer[i];
     allpix = allpix + cc.c8.r + cc.c8.g + cc.c8.b;
+#if defined(USE_ADA_NEOPIXEL) || defined(USE_NEOPIXELBUS)
     if (TaskEffectPFStrip1 < 100)
     {
       cc.c8.r = (cc.c8.r * TaskEffectPFStrip1) / 100;
       cc.c8.g = (cc.c8.g * TaskEffectPFStrip1) / 100;
       cc.c8.b = (cc.c8.b * TaskEffectPFStrip1) / 100;
     };
-
-#ifdef USE_ADA_NEOPIXEL
+#endif    
+#if defined(USE_ADA_NEOPIXEL)
     ALEDStrip1->setPixelColor(i, cc.c8.r, cc.c8.g, cc.c8.b);
-#else
+#elif defined(USE_NEOPIXELBUS)
     NPLEDStrip1.SetPixelColor(i, RgbColor(cc.c8.r, cc.c8.g, cc.c8.b));
 #endif
     yield();
@@ -872,15 +961,17 @@ void servers_handleInfoString()
   StrBuffer1.concat(F(";}{Standalone AP SSID:;<b>"));
   StrBuffer1.concat(Xmas.APname);
   //stripeinfo
-#ifdef USE_ADA_NEOPIXEL
+#if defined(USE_ADA_NEOPIXEL)
   StrBuffer1.concat(F(";}{Use Adafruit NeoPixel;;}"));
-#else
+#elif defined(USE_NEOPIXELBUS)
   StrBuffer1.concat(F(";}{Use NeoPixelBus library;Pin and pixeltype changable in; source only.}"));
   StrBuffer1.concat(F("{Maximum Leds;"));
   StrBuffer1.concat(NP_LEDSCOUNTMAX);
   StrBuffer1.concat(F(";}{Using pin no:;"));
   StrBuffer1.concat(NP_LEDPIN);
   StrBuffer1.concat(F(";changable in source only.}"));
+#elif defined(USE_SPITRANSFER)
+  StrBuffer1.concat(F(";}{Use SPI transfer;Pin SPI-MOSI;GPIO13}"));
 #endif
   StrBuffer1.concat(F("{Max Effect Processing Time:;"));
   StrBuffer1.concat(TaskEffectProcTimeMax);
@@ -1013,16 +1104,17 @@ void servers_handleConfigListString()
   StrBuffer1.concat(Xmas.Stripe1.LedCounts);
   StrBuffer1.concat(F(";ledcounts;10;250}{Maximum Amperage (mA);N;"));
   StrBuffer1.concat(Xmas.Stripe1.AmperageMax);
-  StrBuffer1.concat(F(";ampmax;60;15000}{Used only with;T;Adafruit library}"));
+  StrBuffer1.concat(F(";ampmax;60;15000}{Used with;T;Adafruit library}"));
   StrBuffer1.concat(F("{Neopixel GPIO pin;N;"));
   StrBuffer1.concat(Xmas.Stripe1.PinNo);
   StrBuffer1.concat(F(";pinno;1;16}"));
-  StrBuffer1.concat(F("{Neopixel Type;R;6;neopixeltype;NEO_RGB;1}"));
-  StrBuffer1.concat(F("{Neopixel Type;R;9;neopixeltype;NEO_RBG;0}"));
-  StrBuffer1.concat(F("{Neopixel Type;R;82;neopixeltype;NEO_GRB;0}"));
-  StrBuffer1.concat(F("{Neopixel Type;R;161;neopixeltype;NEO_GBR;0}"));
-  StrBuffer1.concat(F("{Neopixel Type;R;88;neopixeltype;NEO_BRG;0}"));
-  StrBuffer1.concat(F("{Neopixel Type;R;164;neopixeltype;NEO_BGR;0}"));
+  StrBuffer1.concat(F("{Used with;T;SPI and Adafruit library}"));
+  StrBuffer1.concat(F("{<b>Neopixel Type</b>;R;6;neopixeltype;NEO_RGB;1}"));
+  StrBuffer1.concat(F("{;R;9;neopixeltype;NEO_RBG;0}"));
+  StrBuffer1.concat(F("{;R;82;neopixeltype;NEO_GRB;0}"));
+  StrBuffer1.concat(F("{;R;161;neopixeltype;NEO_GBR;0}"));
+  StrBuffer1.concat(F("{;R;88;neopixeltype;NEO_BRG;0}"));
+  StrBuffer1.concat(F("{;R;164;neopixeltype;NEO_BGR;0}"));
   SERIALPRINTD("\r\nSending bytes: ", StrBuffer1.length());
   ServerHTML.send(200, "text/plain", StrBuffer1);
   SERIALPRINTD("\r\nSend:", StrBuffer1);
@@ -1041,10 +1133,10 @@ void servers_handleConfigShowSave()
       n.concat(p);
       if (ServerHTML.argName(i) == n)
       {
-        Xmas.Stripe1.MiddlePoints[p]= uint16_t(ServerHTML.arg(i).toInt());
+        Xmas.Stripe1.MiddlePoints[p] = uint16_t(ServerHTML.arg(i).toInt());
         SERIALPRINTD("\r\nSet midpoint ", p);
         SERIALPRINTD(" = ", Xmas.Stripe1.MiddlePoints[p]);
-      } 
+      }
     }
   }
   ChangeEffect(EFF_MPOINTS);

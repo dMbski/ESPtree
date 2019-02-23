@@ -11,45 +11,51 @@
 /* Use only one library bellow. Comment one*/
 #define USE_ADA_NEOPIXEL
 //#define USE_NEOPIXELBUS
+//#define USE_SPITRANSFER //use hspi bus pin mosi gpio13 to output data 
+                        //no need to additional buffer but spi (all pins)is not usable for other purposes
 
-
-//#define USE_FTPSRV    //NOT implemented:USE ftp_server with spiff 
+//#define USE_FTPSRV    //NOT implemented:USE ftp_server with spiff
 // #define USE_SPIFFS   //NOT implemented: plan to move pages to spiff and complie to http use flash or spiff
-                        //should then be a warning-info page, when there is nothing on spiff to serve  
+//should then be a warning-info page, when there is nothing on spiff to serve
 
 #define USE_SERIAL //comment this to disable serial communications (maybe for fastled?)
 //#define USE_WPS        //uncomment this for use WPS not tested, problem with VSS
 #define USE_OTA //uncomment to use OTA httpupdate with link /DEF_XMAS_OTAPATH
 //#define USE_MDNS //uncomment to use mDNS service for web DEF_XMAS_HOSTNAME.local
 
-#define USE_KEY         //use gpio0 key to change mode-effect
-#define USE_KEY_GPIO    0
+#define USE_KEY //use gpio0 key to change mode-effect
+#define USE_KEY_GPIO 0
 
-#ifdef USE_ADA_NEOPIXEL
+#if defined(USE_ADA_NEOPIXEL)
+#undef USE_NEOPIXELBUS
+#undef USE_SPITRANSFER
 #include <Adafruit_NeoPixel.h>
-#ifdef USE_NEOPIXELBUS
-#error Chose one for use: Adafruit or NeoPixelBus
-#endif
-#endif
-#ifdef USE_NEOPIXELBUS
+#elif defined(USE_NEOPIXELBUS)
+#undef USE_ADA_NEOPIXEL
+#undef USE_SPITRANSFER
 #include <NeoPixelBus.h>
+#elif defined(USE_SPITRANSFER)
+#undef USE_NEOPIXELBUS
+#undef USE_ADA_NEOPIXEL
+#include <SPI.h>
+#else
+#error Uncomment one method to use: Adafruit, NeopixelBus, SPI.
+#endif
+
+#ifdef USE_NEOPIXELBUS
 #define NP_LEDSCOUNTMAX 200 //create neopixelbus with buffor for amount
 //pick relevant to method U use, UART1 on D4 pin
-#define NP_LEDPIN       2   
-#define NP_METHOD       NeoEsp8266Uart1800KbpsMethod
+#define NP_LEDPIN 2
+#define NP_METHOD NeoEsp8266Uart1800KbpsMethod
 //ESP DMA   on RXpin
 //#define NP_METHOD       NeoEsp8266Dma800KbpsMethod
 //#define NP_LEDPIN       3
-#define NP_FEATURE      NeoRgbFeature
-
-#ifdef USE_ADA_NEOPIXEL
-#error Chose one for use: Adafruit or NeoPixelBus
+#define NP_FEATURE NeoRgbFeature
 #endif
+
+#ifndef USE_ADA_NEOPIXEL
 /*  Definitions from the Adafruit NeoPixel library. Need for some functions.*/
 #define NEO_RGB 0x06
-#define NEO_RBG 0x09
-#define NEO_GRB 0x52
-#define NEO_BRG 0x58
 #define NEO_RBG 0x09
 #define NEO_GRB 0x52
 #define NEO_GBR 0xA1
@@ -57,6 +63,7 @@
 #define NEO_BGR 0xA4
 
 #endif
+
 #ifdef USE_FTPSRV
 #ifndef USE_SPIFFS
 #define USE_SPIFFS
@@ -74,12 +81,12 @@
 #define DEF_XMAS_HOSTNAME "XMAS_TREE"
 #define DEF_XMAS_APNAME "XMAS_TREE_AP"
 #ifdef USE_OTA
-#define DEF_XMAS_OTAENABLE  true
+#define DEF_XMAS_OTAENABLE true
 #else
-#define DEF_XMAS_OTAENABLE  false
+#define DEF_XMAS_OTAENABLE false
 #endif
-#define DEF_XMAS_LEDCOUNT 100   // 
-#define DEF_XMAS_LEDPIN 5 //only for adafruits library
+#define DEF_XMAS_LEDCOUNT 100 //
+#define DEF_XMAS_LEDPIN 5     //only for adafruits library
 #define DEF_XMAS_AMPMAX 500
 #define DEF_XMAS_AP_WLANOFF_MS uint32_t(30 * 60 * 1000) //in millis disable AP WIFI after last connection 30min
 #ifdef USE_ADA_NEOPIXEL
@@ -118,11 +125,11 @@
 #define WLAN_ESP_RESTART 99 //ESP will restart
 
 //constats for entering task periods (ms )
-#define PERIOD_TASK_WIFI 500    // controlls restart, when loop period exceed
+#define PERIOD_TASK_WIFI 500 // controlls restart, when loop period exceed
 #define PERIOD_TASK_STATUSLED 150
 #define PERIOD_TASK_EFFECT 25
-#define PERIOD_TASK_BUTTON  200
-#define PERIOD_TASK_UPDATEWS    80
+#define PERIOD_TASK_BUTTON 200
+#define PERIOD_TASK_UPDATEWS 80
 
 #define TASK_WIFI_TRYGIVEUP_MS 20000 //in millis, when attempt to connect to STA, give up after 20sec
 
@@ -131,7 +138,9 @@
 #define SERIALPRINTF(x) Serial.print(F(x))
 #define SERIALPRINT(x) Serial.print(x)
 #define SERIALLN Serial.print(F("/r/n"))
-#define SERIALPRINTD(x, y)  Serial.print(F(x));Serial.print(y)
+#define SERIALPRINTD(x, y) \
+    Serial.print(F(x));    \
+    Serial.print(y)
 #else
 #define SERIALBEGIN
 #define SERIALPRINTF(x)
@@ -139,15 +148,15 @@
 #define SERIALLN
 #define SERIALPRINTD(x, y)
 #endif
-union un_color32
-{
+union un_color32 {
     uint32_t c32;
-    struct {
+    struct
+    {
         uint8_t b;
         uint8_t g;
         uint8_t r;
         uint8_t id;
-    }c8;
+    } c8;
 };
 #define MAX_MIDDLEPOINTS 10
 struct struct_xmas_stripe

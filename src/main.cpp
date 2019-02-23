@@ -1115,6 +1115,9 @@ void servers_handleConfigListString()
   StrBuffer1.concat(F("{;R;161;neopixeltype;NEO_GBR;0}"));
   StrBuffer1.concat(F("{;R;88;neopixeltype;NEO_BRG;0}"));
   StrBuffer1.concat(F("{;R;164;neopixeltype;NEO_BGR;0}"));
+  StrBuffer1.concat(F("{Saved type;T;"));
+  StrBuffer1.concat(NeoPixeltypeToStr(Xmas.Stripe1.neoPixelType));
+  StrBuffer1.concat(F("}"));
   SERIALPRINTD("\r\nSending bytes: ", StrBuffer1.length());
   ServerHTML.send(200, "text/plain", StrBuffer1);
   SERIALPRINTD("\r\nSend:", StrBuffer1);

@@ -137,8 +137,7 @@ void setup()
   NPLEDStrip1.Show();
 #elif defined(USE_SPITRANSFER)
   SPI.begin();
-  SPI.setFrequency(800000 * 4);
-  SPI.write32(0);
+  SPI.setFrequency(800000 * 4); 
 #endif
 
   PixBuffer = new un_color32[PixBuffCount];
@@ -330,7 +329,7 @@ uint32_t byteToWSpacket(uint8_t b)
   for (int i = 0; i < 8; i++)
   {
     if (bitRead(b, i))
-      ret = setNibble(ret, 0b1110, i); //tune this
+      ret = setNibble(ret, 0b1100, i); //tune this
     else
       ret = setNibble(ret, 0b1000, i);
   }
@@ -339,10 +338,11 @@ uint32_t byteToWSpacket(uint8_t b)
 //------------------
 void TaskUpdateSPI()
 {
-  uint32_t wspack[3];
+  uint32_t wspack[3]; //max fifo spi 64bytes
+  uint16_t packsize= 5;
   un_color32 cc;
   for (uint16_t i = 0; i < PixBuffCount; i++)
-  {
+    {
     cc = PixBuffer[i];
     if (TaskEffectPFStrip1 < 100)
     {
@@ -351,7 +351,7 @@ void TaskUpdateSPI()
       cc.c8.b = (cc.c8.b * TaskEffectPFStrip1) / 100;
     };    
     switch (Xmas.Stripe1.neoPixelType)
-    {
+      {
     case NEO_BGR:
       wspack[0] = byteToWSpacket(cc.c8.b);
       wspack[1] = byteToWSpacket(cc.c8.g);
@@ -381,12 +381,13 @@ void TaskUpdateSPI()
       wspack[0] = byteToWSpacket(cc.c8.r);
       wspack[1] = byteToWSpacket(cc.c8.g);
       wspack[2] = byteToWSpacket(cc.c8.b);
-    }
-    //SPI.writeBytes((uint8_t *)&wspack[0], 3 * sizeof(uint32_t)); //flickers, need ossciloskope
+      }
+    //SPI.writeBytes((uint8_t *)&wspack[0], 3 * sizeof(uint32_t)); //flickers, sprawdzic przebiegi oscyloskopem
     SPI.write32(wspack[0]);
     SPI.write32(wspack[1]);
     SPI.write32(wspack[2]);
-  }
+    }
+
   //SPI.write32(0);
 }
 #endif

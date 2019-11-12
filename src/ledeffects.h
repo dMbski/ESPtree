@@ -29,7 +29,7 @@ extern struct_xmas_config Xmas;
 #define HUE_RES 3 //resolution for huetorgb conversion 0=<hue<(360*hue_res)
 #define HUE_MAX (HUE_RES * 360)
 
-#define EFFECTS_COUNT 14
+#define EFFECTS_COUNT 16
 #define EFF_TESTRGB 0
 #define EFF_RAINBOW 1
 #define EFF_BLUE_SP 2
@@ -44,6 +44,8 @@ extern struct_xmas_config Xmas;
 #define EFF_MP_MATRIX 11
 #define EFF_MP_REDF 12
 #define EFF_MP_LINE 13
+#define EFF_MP_BARS 14
+#define EFF_MP_HORX 15
 
 #define EFF0_NAME F("Slow Color check (R R R G G B)")
 #define EFF1_NAME F("Scrolled down rainbow")
@@ -59,6 +61,8 @@ extern struct_xmas_config Xmas;
 #define EFF11_NAME F("Vert slow green rain")
 #define EFF12_NAME F("Vert red glowing up")
 #define EFF13_NAME F("Vert lines rainbow")
+#define EFF14_NAME F("Horiz rainbow bars")
+#define EFF15_NAME F("Horiz rainbow x")
 
 String EffectName(uint8_t no)
 {
@@ -90,6 +94,10 @@ String EffectName(uint8_t no)
     return (EFF12_NAME);
   if (no == 13)
     return (EFF13_NAME);
+  if (no == 14)
+    return (EFF14_NAME);
+  if (no == 15)
+    return (EFF15_NAME);
   return "";
 };
 
@@ -122,22 +130,25 @@ void PixEffect(u8_t effno)
   switch (effno)
   {
   case EFF_TESTRGB:
-    if (colval > 253)
+    if (colval > 254)
     {
       direction = -1;
     }
-    if (colval < 2)
+    if (colval < 6)
     {
       direction = 1;
     }
+    for (currled=0; currled<PixBuffCount;currled++)
+    {
     currcol32 = PixColor32(colval, 0, 0);
-    PixSet(lastled++, currcol32);
-    PixSet(lastled++, currcol32);
-    PixSet(lastled++, currcol32);
+    PixSet(currled++, currcol32);
+    PixSet(currled++, currcol32);
+    PixSet(currled++, currcol32);
     currcol32 = PixColor32(0, colval, 0);
-    PixSet(lastled++, currcol32);
-    PixSet(lastled++, currcol32);
-    PixSet(lastled++, PixColor32(0, 0, colval));
+    PixSet(currled++, currcol32);
+    PixSet(currled++, currcol32);
+    PixSet(currled++, PixColor32(0, 0, colval));
+    };
     colval = colval + direction;
     break; //end EFF_TESTRGB
   case EFF_RAINBOW:
@@ -283,49 +294,107 @@ void PixEffect(u8_t effno)
     fase++;
     break; //end EFF_MP_MATRIX
   case EFF_MP_REDF:
-    if (fase >= MAX_MIDDLEPOINTS)
+    PixFadeAll(2);
+    for (colsat = MAX_MIDDLEPOINTS - 1; colsat > 0; colsat--) //allmiddlepoints from top
+    {
+      currled = Xmas.Stripe1.MiddlePoints[colsat];
+      lastled = Xmas.Stripe1.MiddlePoints[colsat - 1];
+      for (colval = 0; colval < MAX_MIDDLEPOINTS; colval++) //horizont
+      {
+        PixSet(currled + colval, PixGet(lastled + colval).c32);
+        PixSet(currled - colval, PixGet(lastled - colval).c32);
+      }
+    }
+    if (random(2))
+    {
+      PixSparkle(1, COL_YELOW);
+      break;
+    }
+    if (fase > MAX_MIDDLEPOINTS)
     {
       fase = 0;
-      for (uint8_t x = 0; x < linebuffcount; x++)
-        linebuff[x] = PixColor32(random(255), random(x), random(x));
-      PixSmooth();
-    }
-    if (fase == 0)
-    {
-      PixFadeAll(random(MAX_MIDDLEPOINTS));
-      PixSparkle(1, COL_YELOW);
-      for (uint8_t x = 0; x < linebuffcount; x++)
+      PixSparkle(1, COL_WHITE);
+      for (direction = 0; direction < MAX_MIDDLEPOINTS; direction++) //draw 0
       {
-        PixSet(Xmas.Stripe1.MiddlePoints[fase] - x, linebuff[x]);
-        PixSet(Xmas.Stripe1.MiddlePoints[fase] + x, linebuff[x]);
+        currled = Xmas.Stripe1.MiddlePoints[fase];
+        colval = random(255);
+        currcol32 = PixColor32(colval, random(colval / 3), 0);
+        PixSet(currled + direction, currcol32);
+        PixSet(currled - direction, currcol32);
       }
+      break;
     }
-    else
-    {
-      PixFadeAll(255 / (MAX_MIDDLEPOINTS * 2));
-      for (uint8_t x = 0; x < linebuffcount; x++)
-      {
-        un_color32 cc;
-        linebuff[x] = PixFade32(linebuff[x], random(fase));
-        cc = PixGet(Xmas.Stripe1.MiddlePoints[fase] - x);
-        PixSet(Xmas.Stripe1.MiddlePoints[fase] - x, cc.c8.r / 2 + PixGetRed(linebuff[x]) / 2, cc.c8.g / 2 + PixGetGreen(linebuff[x]) / 2, cc.c8.b / 2 + PixGetBlue(linebuff[x]) / 2);
-        cc = PixGet(Xmas.Stripe1.MiddlePoints[fase] + x);
-        PixSet(Xmas.Stripe1.MiddlePoints[fase] + x, (cc.c8.r + PixGetRed(linebuff[x])) / 2, (cc.c8.g + PixGetGreen(linebuff[x])) / 2, (cc.c8.b + PixGetBlue(linebuff[x])) / 2);
-      }
-    }
+
     fase++;
     break; //end EFF_MP_RED
   case EFF_MP_LINE:
-    if (fase >= MAX_MIDDLEPOINTS)
+    PixFadeAll(2);
+    if (!random(4))
+    {
+      PixSmooth();
+      break;
+    }
+    direction = (MAX_MIDDLEPOINTS)-random(MAX_MIDDLEPOINTS * 2);
+    lastcol32 = HueToRGB32(random(HUE_MAX), 255, 128 + random(127));
+    PixFadeAll(2);
+    fase = 0;
+    while (fase < MAX_MIDDLEPOINTS)
+    {
+      PixSet(Xmas.Stripe1.MiddlePoints[fase] + direction-1, lastcol32);
+      PixSet(Xmas.Stripe1.MiddlePoints[fase] + direction, lastcol32);
+      PixSet(Xmas.Stripe1.MiddlePoints[fase] + direction+1, lastcol32);
+      fase++;
+    }
+    break; // end EFF_MP_LINE
+  case EFF_MP_BARS:
+    PixSmooth();
+    if (direction > 5)
+    {
+      PixFadeAll(1);
+      direction--;
+      break;
+    }
+
+    if ((fase > MAX_MIDDLEPOINTS) || (lastcol32 > HUE_MAX))
     {
       fase = 0;
-      direction = (MAX_MIDDLEPOINTS)-random(MAX_MIDDLEPOINTS * 2);
-      lastcol32 = HueToRGB32(random(HUE_MAX), 255, 128 + random(127));
-      PixFadeAll(2);
+      lastcol32 = random(HUE_MAX);
     }
-    PixSet(Xmas.Stripe1.MiddlePoints[fase] + direction, lastcol32);
+    currcol32 = HueToRGB32(lastcol32, 255, 255);
+    for (uint8_t x = 0; x < MAX_MIDDLEPOINTS; x++)
+    {
+      currled = Xmas.Stripe1.MiddlePoints[fase];
+      PixSet(currled + x, currcol32);
+      PixSet(currled - x, currcol32);
+    }
     fase++;
-    break; // end EFF_MP_LINE
+    lastcol32 = lastcol32 + HUE_RES * (fase*HUE_RES );
+    direction = random(fase * 3);
+    break; // end EFF_MP_BARS
+  case EFF_MP_HORX:
+    colsat++;
+    if (colsat > 5)
+    {
+      colsat = 0;
+    }
+    else
+      break;
+    fase++;
+    if (fase > linebuffcount)
+      fase = 0;
+    if (fase == 0)
+    {
+      lastcol32 = HueToRGB32(random(HUE_MAX), 255, 255);
+      PixSmooth();
+    }
+
+    for (direction = 0; direction < MAX_MIDDLEPOINTS; direction++)
+    {
+      currled = Xmas.Stripe1.MiddlePoints[direction];
+      PixSet(currled + fase, lastcol32);
+      PixSet(currled - fase, lastcol32);
+    }
+    break; //END EFF_MP_HORX
   }
   lasteffect = effno;
 }

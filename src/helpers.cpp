@@ -2,29 +2,35 @@
 #define HELPERS_CPP
 #include <Arduino.h>
 #include <c_types.h>
-#include <netif/ppp/ccp.h>
+//#include <netif/ppp/ccp.h>
+#ifndef u8_t
+typedef uint8_t u8_t;
+typedef uint16_t u16_t;
+#endif
 
 //configurations
 #define SERVER_WS_PORT 81
 #define SERVER_HTML_PORT 80
 
 /* Use only one library bellow. Comment one*/
-#define USE_ADA_NEOPIXEL
+//#define USE_ADA_NEOPIXEL
 //#define USE_NEOPIXELBUS
-//#define USE_SPITRANSFER //use hspi bus pin mosi gpio13 to output data 
+#define USE_SPITRANSFER //use hspi bus pin mosi gpio13 to output data 
                         //no need to additional buffer but spi (all pins)is not usable for other purposes
 
 //#define USE_FTPSRV    //NOT implemented:USE ftp_server with spiff
 // #define USE_SPIFFS   //NOT implemented: plan to move pages to spiff and complie to http use flash or spiff
 //should then be a warning-info page, when there is nothing on spiff to serve
 
-#define USE_SERIAL //comment this to disable serial communications (maybe for fastled?)
-//#define USE_WPS        //uncomment this for use WPS not tested, problem with VSS
+//#define USE_SERIAL //comment this to disable serial communications (maybe for fastled?)
+#define USE_WPS        //uncomment this for use WPS not tested, problem with VSS
 #define USE_OTA //uncomment to use OTA httpupdate with link /DEF_XMAS_OTAPATH
 //#define USE_MDNS //uncomment to use mDNS service for web DEF_XMAS_HOSTNAME.local
 
 #define USE_KEY //use gpio0 key to change mode-effect
 #define USE_KEY_GPIO 0
+
+#define LEDSTATUS_PIN  2//use buildin led -LED_BUILTIN
 
 #if defined(USE_ADA_NEOPIXEL)
 #undef USE_NEOPIXELBUS
@@ -37,7 +43,11 @@
 #elif defined(USE_SPITRANSFER)
 #undef USE_NEOPIXELBUS
 #undef USE_ADA_NEOPIXEL
-#include <SPI.h>
+//#include <SPI.h>
+#ifndef HSPI
+#define HSPI 1
+#endif
+
 #else
 #error Uncomment one method to use: Adafruit, NeopixelBus, SPI.
 #endif
@@ -86,7 +96,7 @@
 #define DEF_XMAS_OTAENABLE false
 #endif
 #define DEF_XMAS_LEDCOUNT 100 //
-#define DEF_XMAS_LEDPIN 5     //only for adafruits library
+#define DEF_XMAS_LEDPIN 13     //only for adafruits library
 #define DEF_XMAS_AMPMAX 500
 #define DEF_XMAS_AP_WLANOFF_MS uint32_t(30 * 60 * 1000) //in millis disable AP WIFI after last connection 30min
 #ifdef USE_ADA_NEOPIXEL
@@ -98,7 +108,7 @@
 #define EEPROM_SIZE 250 //should be minimal (buffred in ram) & need to be <= SPI_FLASH_SEC_SIZE (4092)
 #define EEPROM_START 1
 
-#define XMAS_VER 20 //change this will clear stored settings = default settings
+#define XMAS_VER 10 //change this will clear stored settings = default settings
 #define EEPROM_MAGIC 0x0F
 
 //definitions for Xmas.WifiMode
@@ -126,7 +136,7 @@
 
 //constats for entering task periods (ms )
 #define PERIOD_TASK_WIFI 500 // controlls restart, when loop period exceed
-#define PERIOD_TASK_STATUSLED 150
+#define PERIOD_TASK_STATUSLED 200
 #define PERIOD_TASK_EFFECT 25
 #define PERIOD_TASK_BUTTON 200
 #define PERIOD_TASK_UPDATEWS 80

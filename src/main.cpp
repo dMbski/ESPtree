@@ -14,7 +14,9 @@
 #elif defined(USE_NEOPIXELBUS)
 #include <NeoPixelBus.h>
 #elif defined(USE_SPITRANSFER)
-#include <SPI.h>
+//#include <SPI.h>
+#include "spi_register.h"
+
 #endif
 
 #ifdef USE_MDNS
@@ -109,7 +111,7 @@ void setup()
   SERIALBEGIN;
   SERIALPRINTF("\r\nStart...");
   WiFi.persistent(false); //dont store wifi config in sdk flash, we'll take of that
-  pinMode(LED_BUILTIN, OUTPUT);
+  pinMode(LEDSTATUS_PIN, OUTPUT);
 #ifdef USE_KEY
   pinMode(USE_KEY_GPIO, INPUT_PULLUP);
 #endif
@@ -136,8 +138,47 @@ void setup()
   NPLEDStrip1.Begin();
   NPLEDStrip1.Show();
 #elif defined(USE_SPITRANSFER)
-  SPI.begin();
-  SPI.setFrequency(800000 * 4); 
+
+  //based on metalphreak
+  //init hspi gpio
+  PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDI_U, 2); //GPIO12 is HSPI MISO pin (Master Data In)
+  PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTCK_U, 2); //GPIO13 is HSPI MOSI pin (Master Data Out)
+  PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTMS_U, 2); //GPIO14 is HSPI CLK pin (Clock)
+  PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDO_U, 2); //GPIO15 is HSPI CS pin (Chip Select / Slave Select)
+  //spimode
+  CLEAR_PERI_REG_MASK(SPI_PIN(HSPI), SPI_IDLE_EDGE);
+  CLEAR_PERI_REG_MASK(SPI_USER(HSPI), SPI_CK_OUT_EDGE);
+//spi clock (160MHz /10)/4
+#define SPI_PREDIV 10 //10 tunned
+#define SPI_CNTDIV 4  //4
+  //spi clock (80MHz /5)/4
+
+  WRITE_PERI_REG(SPI_CLOCK(HSPI),
+                 (((SPI_PREDIV - 1) & SPI_CLKDIV_PRE) << SPI_CLKDIV_PRE_S) |
+                     (((SPI_CNTDIV - 1) & SPI_CLKCNT_N) << SPI_CLKCNT_N_S) |
+                     (((SPI_CNTDIV >> 1) & SPI_CLKCNT_H) << SPI_CLKCNT_H_S) |
+                     ((0 & SPI_CLKCNT_L) << SPI_CLKCNT_L_S));
+  //spi tx byte order
+  //CLEAR_PERI_REG_MASK(SPI_USER(HSPI), SPI_WR_BYTE_ORDER);
+  //MSB
+  SET_PERI_REG_MASK(SPI_USER(HSPI), SPI_WR_BYTE_ORDER);
+  //spi rest
+  SET_PERI_REG_MASK(SPI_USER(HSPI), SPI_CS_SETUP | SPI_CS_HOLD);
+  CLEAR_PERI_REG_MASK(SPI_USER(HSPI), SPI_FLASH_MODE);
+
+  /*
+  #if CPU_CLK_FREQ == (160*1000000)
+  spi_clock(HSPI, 10, 5);
+  #else
+  spi_clock(HSPI, 5, 5);
+  #endif
+  */
+  /*
+  //SPI library
+  //SPI.begin();
+  //work write32
+  //SPI.setFrequency(800000 * 4);
+  */
 #endif
 
   PixBuffer = new un_color32[PixBuffCount];
@@ -175,10 +216,11 @@ void loop()
   if (millis() > Enter_TaskStatusLed) //update status led
   {
     Task_StatusLED();
+
     if (!LedStatus)
-      Enter_TaskStatusLed = millis() + ((WlanStatus * 4) * PERIOD_TASK_STATUSLED);
+      Enter_TaskStatusLed = millis() + ((WlanStatus * PERIOD_TASK_STATUSLED));
     else
-      Enter_TaskStatusLed = millis() + ((WlanStatus / 2) * PERIOD_TASK_STATUSLED);
+      Enter_TaskStatusLed = millis() + PERIOD_TASK_STATUSLED;
   };
   if (millis() > Enter_TaskWifi) //process wifi changes
   {
@@ -326,6 +368,7 @@ inline uint32_t setNibble(uint32_t innumber, uint32_t nibble, uint8_t nonibb)
 uint32_t byteToWSpacket(uint8_t b)
 {
   uint32_t ret = 0;
+
   for (int i = 0; i < 8; i++)
   {
     if (bitRead(b, i))
@@ -336,59 +379,103 @@ uint32_t byteToWSpacket(uint8_t b)
   return ret;
 }
 //------------------
+void PrepareWSpacket(un_color32 ledcolor, uint32_t *wspack) //return lastledno
+{
+  if (TaskEffectPFStrip1 < 100)
+  {
+    ledcolor.c8.r = (ledcolor.c8.r * TaskEffectPFStrip1) / 100;
+    ledcolor.c8.g = (ledcolor.c8.g * TaskEffectPFStrip1) / 100;
+    ledcolor.c8.b = (ledcolor.c8.b * TaskEffectPFStrip1) / 100;
+  };
+  switch (Xmas.Stripe1.neoPixelType)
+  {
+  case NEO_BGR:
+    wspack[0] = byteToWSpacket(ledcolor.c8.b);
+    wspack[1] = byteToWSpacket(ledcolor.c8.g);
+    wspack[2] = byteToWSpacket(ledcolor.c8.r);
+    break;
+  case NEO_BRG:
+    wspack[0] = byteToWSpacket(ledcolor.c8.b);
+    wspack[1] = byteToWSpacket(ledcolor.c8.r);
+    wspack[2] = byteToWSpacket(ledcolor.c8.g);
+    break;
+  case NEO_GBR:
+    wspack[0] = byteToWSpacket(ledcolor.c8.g);
+    wspack[1] = byteToWSpacket(ledcolor.c8.b);
+    wspack[2] = byteToWSpacket(ledcolor.c8.r);
+    break;
+  case NEO_GRB:
+    wspack[0] = byteToWSpacket(ledcolor.c8.g);
+    wspack[1] = byteToWSpacket(ledcolor.c8.r);
+    wspack[2] = byteToWSpacket(ledcolor.c8.b);
+    break;
+  case NEO_RBG:
+    wspack[0] = byteToWSpacket(ledcolor.c8.r);
+    wspack[1] = byteToWSpacket(ledcolor.c8.b);
+    wspack[2] = byteToWSpacket(ledcolor.c8.g);
+    break;
+  default:
+    wspack[0] = byteToWSpacket(ledcolor.c8.r);
+    wspack[1] = byteToWSpacket(ledcolor.c8.g);
+    wspack[2] = byteToWSpacket(ledcolor.c8.b);
+  }
+}
+//------------------
 void TaskUpdateSPI()
 {
-  uint32_t wspack[3]; //max fifo spi 64bytes
-  uint16_t packsize= 5;
+
   un_color32 cc;
-  for (uint16_t i = 0; i < PixBuffCount; i++)
+  //setup spi
+  while (READ_PERI_REG(SPI_CMD(HSPI)) & SPI_USR)
+  {
+  }; //wait for hspi
+  CLEAR_PERI_REG_MASK(SPI_USER(HSPI), SPI_USR_MOSI | SPI_USR_MISO | SPI_USR_COMMAND | SPI_USR_ADDR | SPI_USR_DUMMY);
+  SET_PERI_REG_MASK(SPI_USER(HSPI), SPI_USR_MOSI);
+#define LEDPACK_MAX 5
+  uint32_t wspack[3 * LEDPACK_MAX]; // 3*4, max fifo spi 64bytes
+  uint16_t i = 0;
+  uint16_t ledinpack = 0;
+#define LEDBITSTOSEND(c) (c * 3 * sizeof(uint32_t) * 8) //calc
+  //WRITE_PERI_REG(SPI_USER1(HSPI), (((LEDBITSTOSEND(LEDPACK_MAX) - 1) & SPI_USR_MOSI_BITLEN) << SPI_USR_MOSI_BITLEN_S)); //Number of bits to Send
+
+  while (i < PixBuffCount)
+  {
+    ledinpack = 0;
+    if ((i + LEDPACK_MAX) < PixBuffCount)
     {
-    cc = PixBuffer[i];
-    if (TaskEffectPFStrip1 < 100)
-    {
-      cc.c8.r = (cc.c8.r * TaskEffectPFStrip1) / 100;
-      cc.c8.g = (cc.c8.g * TaskEffectPFStrip1) / 100;
-      cc.c8.b = (cc.c8.b * TaskEffectPFStrip1) / 100;
-    };    
-    switch (Xmas.Stripe1.neoPixelType)
+      while (ledinpack < LEDPACK_MAX)
       {
-    case NEO_BGR:
-      wspack[0] = byteToWSpacket(cc.c8.b);
-      wspack[1] = byteToWSpacket(cc.c8.g);
-      wspack[2] = byteToWSpacket(cc.c8.r);
-      break;
-    case NEO_BRG:
-      wspack[0] = byteToWSpacket(cc.c8.b);
-      wspack[1] = byteToWSpacket(cc.c8.r);
-      wspack[2] = byteToWSpacket(cc.c8.g);
-      break;
-    case NEO_GBR:
-      wspack[0] = byteToWSpacket(cc.c8.g);
-      wspack[1] = byteToWSpacket(cc.c8.b);
-      wspack[2] = byteToWSpacket(cc.c8.r);
-      break;
-    case NEO_GRB:
-      wspack[0] = byteToWSpacket(cc.c8.g);
-      wspack[1] = byteToWSpacket(cc.c8.r);
-      wspack[2] = byteToWSpacket(cc.c8.b);
-      break;
-    case NEO_RBG:
-      wspack[0] = byteToWSpacket(cc.c8.r);
-      wspack[1] = byteToWSpacket(cc.c8.b);
-      wspack[2] = byteToWSpacket(cc.c8.g);
-      break;
-    default:
-      wspack[0] = byteToWSpacket(cc.c8.r);
-      wspack[1] = byteToWSpacket(cc.c8.g);
-      wspack[2] = byteToWSpacket(cc.c8.b);
+        cc = PixBuffer[i];
+        PrepareWSpacket(cc, &wspack[ledinpack * 3]);
+        ledinpack++;
+        i++;
       }
-    //SPI.writeBytes((uint8_t *)&wspack[0], 3 * sizeof(uint32_t)); //flickers, sprawdzic przebiegi oscyloskopem
-    SPI.write32(wspack[0]);
-    SPI.write32(wspack[1]);
-    SPI.write32(wspack[2]);
+    }
+    else
+    {
+      while (i < PixBuffCount)
+      {
+        cc = PixBuffer[i];
+        PrepareWSpacket(cc, &wspack[ledinpack * 3]);
+        i++;
+        ledinpack++;
+      }
+    }
+    //wait for hspi
+    while (READ_PERI_REG(SPI_CMD(HSPI)) & SPI_USR)
+    {
+    };
+    //Number of bits to send via MOSI
+    WRITE_PERI_REG(SPI_USER1(HSPI), (((LEDBITSTOSEND(ledinpack) - 1) & SPI_USR_MOSI_BITLEN) << SPI_USR_MOSI_BITLEN_S));
+    //copy to HSPI fifo
+    for (uint8_t lc = 0; lc < (ledinpack * 3); lc++)
+    {
+      *(uint32_t *)(SPI_W0(HSPI) + (lc * 4)) = (uint32_t)(wspack[lc]);
     }
 
-  //SPI.write32(0);
+    SET_PERI_REG_MASK(SPI_CMD(HSPI), SPI_USR); //toggle spi sending
+
+  } // end while
 }
 #endif
 //----------------
@@ -407,7 +494,7 @@ void Task_BufferToStrip()
       cc.c8.g = (cc.c8.g * TaskEffectPFStrip1) / 100;
       cc.c8.b = (cc.c8.b * TaskEffectPFStrip1) / 100;
     };
-#endif    
+#endif
 #if defined(USE_ADA_NEOPIXEL)
     ALEDStrip1->setPixelColor(i, cc.c8.r, cc.c8.g, cc.c8.b);
 #elif defined(USE_NEOPIXELBUS)
@@ -564,7 +651,7 @@ void Task_Effect()
 void Task_StatusLED()
 {
 
-  digitalWrite(LED_BUILTIN, LedStatus);
+  digitalWrite(LEDSTATUS_PIN, LedStatus);
   LedStatus = !LedStatus;
 }
 //-------------

@@ -1,6 +1,6 @@
 # ESPtree
 another ESP8266 controller for neopixels strip, with WEB interface and some cool features (own SPI transfer method)
-THIS IS **NOT COMPLETED**...barely tested 
+THIS IS **NOT COMPLETED**... Tested with ESP01 and ESP12. SPI method, works stable (200leds 12ms update time) and will be library for ESP8266 (soon).
 >big mess in source, *but yet usable* ;-)
 >
 ><img width="300" src="https://github.com/dMbski/ESPtree/blob/master/screens/Schowek01.jpg" /> <img height="400" src="https://github.com/dMbski/ESPtree/blob/master/screens/Schowek02.jpg" /><img width="300" src="https://github.com/dMbski/ESPtree/blob/master/screens/Schowek03.jpg" />

@@ -12,9 +12,16 @@ With *Adafruit NeoPixel* library, **pin, quantity and color type of leds** are c
 
 _(Recomend this method)_ With *SPI_transfer*, **type and quantity of leds** are changable either.
 
-SPI transfer uses small HSPI fifo buffer (60 from 64bytes) to buffer data for 5 leds. HSPI speed is calculated for 160MHZ CPU (80MHz works too), there is compiller message with SPI speed. WS signal is created by simulate WS timing in 4bit SPI data (1 led in 3 x uint32) and is generated via MOSI pin. Just connect it to WS281x DIN pin. I use simple transistor voltage level shifter.
+SPI transfer uses small HSPI fifo buffer (60 from 64bytes) to buffer data for 5 leds. HSPI speed is calculated for 160MHZ CPU (80MHz works too), there is compiller message with SPI speed. WS signal is created by simulate WS timing in 4bit SPI data (1 led in 3 x uint32) and is generated via MOSI pin. Just connect it to WS281x DIN pin. 
 
-Standard SPI.writebytes does not work at all. Works only SPI.write32
+This implementation takes over SPI (MOSI pin) and is not usable as proper SPI bus, but...
+To use SPI with another device, AND gate is needed. To simulate CS (active high) connect to A, B to MOSI-this could be TTL level shifter either.
+
+I use simple transistor voltage level shifter.
+
+Standard SPI.writebytes does not work at all.
+
+Only SPI.write32 works. Just set SPI freq around 3.2MHz and send wspacket prepared by _prepareSPIpacket()_ function.
 
 I wanted to use https://github.com/MetalPhreak/ESP8266_SPI_Driver but finally had to write own method to transfer without waiting for ends.
 Thanks to His library I wrote my SPI method to send data with HSPI buffer. 
@@ -43,4 +50,4 @@ To run this project in Arduino IDE, just copy /src folder to Arduino's sketches 
 - ESP01 module -need to disable OTA, no need to use SPIFF (all pages in flash);
 - ESP12e -all features
 
-firmware.bin - compiled for ESP12 module with Adafruit library
+firmware.bin - compiled for ESP12, use SPI method.

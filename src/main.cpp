@@ -138,35 +138,6 @@ void setup()
   NPLEDStrip1.Show();
 #elif defined(USE_SPITRANSFER)
   prepareHSPI();
-  /*
-  //based on metalphreak
-  //init hspi gpio
-  PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDI_U, 2); //GPIO12 is HSPI MISO pin (Master Data In)
-  PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTCK_U, 2); //GPIO13 is HSPI MOSI pin (Master Data Out)
-  PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTMS_U, 2); //GPIO14 is HSPI CLK pin (Clock)
-  PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDO_U, 2); //GPIO15 is HSPI CS pin (Chip Select / Slave Select)
-  //spimode
-  CLEAR_PERI_REG_MASK(SPI_PIN(HSPI), SPI_IDLE_EDGE);
-  CLEAR_PERI_REG_MASK(SPI_USER(HSPI), SPI_CK_OUT_EDGE);
-//spi clock (160MHz /10)/4
-#define SPI_PREDIV 10 //10 tunned
-#define SPI_CNTDIV 4  //4
-  //spi clock (80MHz /5)/4
-
-  WRITE_PERI_REG(SPI_CLOCK(HSPI),
-                 (((SPI_PREDIV - 1) & SPI_CLKDIV_PRE) << SPI_CLKDIV_PRE_S) |
-                     (((SPI_CNTDIV - 1) & SPI_CLKCNT_N) << SPI_CLKCNT_N_S) |
-                     (((SPI_CNTDIV >> 1) & SPI_CLKCNT_H) << SPI_CLKCNT_H_S) |
-                     ((0 & SPI_CLKCNT_L) << SPI_CLKCNT_L_S));
-  //spi tx byte order
-  //CLEAR_PERI_REG_MASK(SPI_USER(HSPI), SPI_WR_BYTE_ORDER);
-  //MSB
-  SET_PERI_REG_MASK(SPI_USER(HSPI), SPI_WR_BYTE_ORDER);
-  //spi rest
-  SET_PERI_REG_MASK(SPI_USER(HSPI), SPI_CS_SETUP | SPI_CS_HOLD);
-  CLEAR_PERI_REG_MASK(SPI_USER(HSPI), SPI_FLASH_MODE);
-
-*/
 #endif
 
   PixBuffer = new un_color32[PixBuffCount];

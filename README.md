@@ -12,7 +12,7 @@ With *Adafruit NeoPixel* library, **pin, quantity and color type of leds** are c
 
 _(Recomend this method)_ With *SPI_transfer*, **type and quantity of leds** are changable either.
 
-SPI transfer uses small HSPI fifo buffer (60 from 64bytes) to buffer data for 5 leds. HSPI speed is calculated for 160MHZ CPU (80MHz works too), there is compiller meseage with SPI speed. WS signal is created by simulate WS timing in 4bit SPI data (1 led in 3 x uint32) and is generated via MOSI pin. Just connect it to WS281x DIN pin. I use simple transistor voltage level shifter.
+SPI transfer uses small HSPI fifo buffer (60 from 64bytes) to buffer data for 5 leds. HSPI speed is calculated for 160MHZ CPU (80MHz works too), there is compiller message with SPI speed. WS signal is created by simulate WS timing in 4bit SPI data (1 led in 3 x uint32) and is generated via MOSI pin. Just connect it to WS281x DIN pin. I use simple transistor voltage level shifter.
 
 Standard SPI.writebytes does not work at all. Works only SPI.write32
 

@@ -13,7 +13,7 @@
 #warning "SPI set for 160MHz"
 #else
 //for standard ESP8266 80MHz clock
-#define SPI_PREDIV 5  //5
+#define SPI_PREDIV 4  //5
 #define SPI_CNTDIV 5
 #warning "SPI set for 80MHz"
 #endif

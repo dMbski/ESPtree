@@ -10,14 +10,14 @@ THIS IS **NOT COMPLETED**... Tested with ESP01 and ESP12. SPI method, works stab
 Select library in file helpers.cpp. 
 With *Adafruit NeoPixel* library, **pin, quantity and color type of leds** are changable at runtime via WEB.
 
-(Recomend this method)With *SPI_transfer*, **type and quantity of leds** are changable either.
+_(Recomend this method)_ With *SPI_transfer*, **type and quantity of leds** are changable either.
 
 SPI transfer uses small HSPI fifo buffer (60 from 64bytes) to buffer data for 5 leds. HSPI speed is calculated for 160MHZ CPU (80MHz works too), there is compiller meseage with SPI speed. WS signal is created by simulate WS timing in 4bit SPI data (1 led in 3 x uint32) and is generated via MOSI pin. Just connect it to WS281x DIN pin. I use simple transistor voltage level shifter.
 
-Standard SPI.writebytes does not work at all. Worked only with SPI.write32.
+Standard SPI.writebytes does not work at all. Works only SPI.write32
 
-I wanted to use https://github.com/MetalPhreak/ESP8266_SPI_Driver but finally had to write own methods to transfer.
-Thanks to His library I wrote my SPI method. 
+I wanted to use https://github.com/MetalPhreak/ESP8266_SPI_Driver but finally had to write own method to transfer without waiting for ends.
+Thanks to His library I wrote my SPI method to send data with HSPI buffer. 
 
 Every method has cons and pros.
 
@@ -33,7 +33,8 @@ There is feature when cycle is to long *(4xPERIOD_TASK_WIFI)* twice , resets ESP
 #### Use key to change effect.
 I tested this on MCU v2 clone with key marked Flash which is connected to GPIO0. Changable in helpers.cpp (USE_KEY_GPIO). Enabled INPUT_PULLUP.
 #### Use WPS connectivity
-I use VSS with platformio and when it is enabled, I get compiller error. Tested in Arduino IDE, works.
+~~I use VSS with platformio and when it is enabled, I get compiller error. Tested in Arduino IDE, works.~~
+Works.
 #### Use status LED.
 Use led connected to pin GPIO02. Led build in ESP12's pcb.
 #### Arduino IDE

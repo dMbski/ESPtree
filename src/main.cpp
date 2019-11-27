@@ -14,8 +14,7 @@
 #elif defined(USE_NEOPIXELBUS)
 #include <NeoPixelBus.h>
 #elif defined(USE_SPITRANSFER)
-//#include <SPI.h>
-#include "spi_register.h"
+#include "esp_to_ws281x.h"
 
 #endif
 
@@ -138,7 +137,8 @@ void setup()
   NPLEDStrip1.Begin();
   NPLEDStrip1.Show();
 #elif defined(USE_SPITRANSFER)
-
+  prepareHSPI();
+  /*
   //based on metalphreak
   //init hspi gpio
   PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDI_U, 2); //GPIO12 is HSPI MISO pin (Master Data In)
@@ -166,19 +166,7 @@ void setup()
   SET_PERI_REG_MASK(SPI_USER(HSPI), SPI_CS_SETUP | SPI_CS_HOLD);
   CLEAR_PERI_REG_MASK(SPI_USER(HSPI), SPI_FLASH_MODE);
 
-  /*
-  #if CPU_CLK_FREQ == (160*1000000)
-  spi_clock(HSPI, 10, 5);
-  #else
-  spi_clock(HSPI, 5, 5);
-  #endif
-  */
-  /*
-  //SPI library
-  //SPI.begin();
-  //work write32
-  //SPI.setFrequency(800000 * 4);
-  */
+*/
 #endif
 
   PixBuffer = new un_color32[PixBuffCount];
@@ -358,125 +346,12 @@ void xmas_printcfg(struct_xmas_config *cfg)
 }
 //----------------
 #ifdef USE_SPITRANSFER
-inline uint32_t setNibble(uint32_t innumber, uint32_t nibble, uint8_t nonibb)
-{
-  nibble = (nibble & 0xF) << (4 * nonibb);
-  innumber = innumber & ~(0xF << (4 * nonibb));
-  return (innumber | nibble);
-}
-//-----------------
-uint32_t byteToWSpacket(uint8_t b)
-{
-  uint32_t ret = 0;
-
-  for (int i = 0; i < 8; i++)
-  {
-    if (bitRead(b, i))
-      ret = setNibble(ret, 0b1100, i); //tune this
-    else
-      ret = setNibble(ret, 0b1000, i);
-  }
-  return ret;
-}
-//------------------
-void PrepareWSpacket(un_color32 ledcolor, uint32_t *wspack) //return lastledno
-{
-  if (TaskEffectPFStrip1 < 100)
-  {
-    ledcolor.c8.r = (ledcolor.c8.r * TaskEffectPFStrip1) / 100;
-    ledcolor.c8.g = (ledcolor.c8.g * TaskEffectPFStrip1) / 100;
-    ledcolor.c8.b = (ledcolor.c8.b * TaskEffectPFStrip1) / 100;
-  };
-  switch (Xmas.Stripe1.neoPixelType)
-  {
-  case NEO_BGR:
-    wspack[0] = byteToWSpacket(ledcolor.c8.b);
-    wspack[1] = byteToWSpacket(ledcolor.c8.g);
-    wspack[2] = byteToWSpacket(ledcolor.c8.r);
-    break;
-  case NEO_BRG:
-    wspack[0] = byteToWSpacket(ledcolor.c8.b);
-    wspack[1] = byteToWSpacket(ledcolor.c8.r);
-    wspack[2] = byteToWSpacket(ledcolor.c8.g);
-    break;
-  case NEO_GBR:
-    wspack[0] = byteToWSpacket(ledcolor.c8.g);
-    wspack[1] = byteToWSpacket(ledcolor.c8.b);
-    wspack[2] = byteToWSpacket(ledcolor.c8.r);
-    break;
-  case NEO_GRB:
-    wspack[0] = byteToWSpacket(ledcolor.c8.g);
-    wspack[1] = byteToWSpacket(ledcolor.c8.r);
-    wspack[2] = byteToWSpacket(ledcolor.c8.b);
-    break;
-  case NEO_RBG:
-    wspack[0] = byteToWSpacket(ledcolor.c8.r);
-    wspack[1] = byteToWSpacket(ledcolor.c8.b);
-    wspack[2] = byteToWSpacket(ledcolor.c8.g);
-    break;
-  default:
-    wspack[0] = byteToWSpacket(ledcolor.c8.r);
-    wspack[1] = byteToWSpacket(ledcolor.c8.g);
-    wspack[2] = byteToWSpacket(ledcolor.c8.b);
-  }
-}
 //------------------
 void TaskUpdateSPI()
 {
-
-  un_color32 cc;
-  //setup spi
-  while (READ_PERI_REG(SPI_CMD(HSPI)) & SPI_USR)
-  {
-  }; //wait for hspi
-  CLEAR_PERI_REG_MASK(SPI_USER(HSPI), SPI_USR_MOSI | SPI_USR_MISO | SPI_USR_COMMAND | SPI_USR_ADDR | SPI_USR_DUMMY);
-  SET_PERI_REG_MASK(SPI_USER(HSPI), SPI_USR_MOSI);
-#define LEDPACK_MAX 5
-  uint32_t wspack[3 * LEDPACK_MAX]; // 3*4, max fifo spi 64bytes
-  uint16_t i = 0;
-  uint16_t ledinpack = 0;
-#define LEDBITSTOSEND(c) (c * 3 * sizeof(uint32_t) * 8) //calc
-  //WRITE_PERI_REG(SPI_USER1(HSPI), (((LEDBITSTOSEND(LEDPACK_MAX) - 1) & SPI_USR_MOSI_BITLEN) << SPI_USR_MOSI_BITLEN_S)); //Number of bits to Send
-
-  while (i < PixBuffCount)
-  {
-    ledinpack = 0;
-    if ((i + LEDPACK_MAX) < PixBuffCount)
-    {
-      while (ledinpack < LEDPACK_MAX)
-      {
-        cc = PixBuffer[i];
-        PrepareWSpacket(cc, &wspack[ledinpack * 3]);
-        ledinpack++;
-        i++;
-      }
-    }
-    else
-    {
-      while (i < PixBuffCount)
-      {
-        cc = PixBuffer[i];
-        PrepareWSpacket(cc, &wspack[ledinpack * 3]);
-        i++;
-        ledinpack++;
-      }
-    }
-    //wait for hspi
-    while (READ_PERI_REG(SPI_CMD(HSPI)) & SPI_USR)
-    {
-    };
-    //Number of bits to send via MOSI
-    WRITE_PERI_REG(SPI_USER1(HSPI), (((LEDBITSTOSEND(ledinpack) - 1) & SPI_USR_MOSI_BITLEN) << SPI_USR_MOSI_BITLEN_S));
-    //copy to HSPI fifo
-    for (uint8_t lc = 0; lc < (ledinpack * 3); lc++)
-    {
-      *(uint32_t *)(SPI_W0(HSPI) + (lc * 4)) = (uint32_t)(wspack[lc]);
-    }
-
-    SET_PERI_REG_MASK(SPI_CMD(HSPI), SPI_USR); //toggle spi sending
-
-  } // end while
+  sendSPI(PixBuffer, PixBuffCount, Xmas.Stripe1.neoPixelType, TaskEffectPFStrip1);
 }
+
 #endif
 //----------------
 void Task_BufferToStrip()
@@ -1190,7 +1065,7 @@ void servers_handleConfigListString()
   StrBuffer1.concat(Xmas.EffectTimeoutMs / 1000);
   StrBuffer1.concat(F(";autoeffect;0;3600}{Number of LEDs;N;"));
   StrBuffer1.concat(Xmas.Stripe1.LedCounts);
-  StrBuffer1.concat(F(";ledcounts;10;250}{Maximum Amperage (mA);N;"));
+  StrBuffer1.concat(F(";ledcounts;10;300}{Maximum Amperage (mA);N;"));
   StrBuffer1.concat(Xmas.Stripe1.AmperageMax);
   StrBuffer1.concat(F(";ampmax;60;15000}{Used with;T;Adafruit library}"));
   StrBuffer1.concat(F("{Neopixel GPIO pin;N;"));

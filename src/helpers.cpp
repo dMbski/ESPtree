@@ -102,7 +102,7 @@ typedef uint16_t u16_t;
 #ifdef USE_ADA_NEOPIXEL
 #define DEF_XMAS_LEDTYPE (NEO_GRB + NEO_KHZ800)
 #else
-#define DEF_XMAS_LEDTYPE (NEO_GRB)
+#define DEF_XMAS_LEDTYPE (NEO_RGB)
 #endif
 //helpful definitions
 #define EEPROM_SIZE 250 //should be minimal (buffred in ram) & need to be <= SPI_FLASH_SEC_SIZE (4092)
@@ -137,7 +137,7 @@ typedef uint16_t u16_t;
 //constats for entering task periods (ms )
 #define PERIOD_TASK_WIFI 500 // controlls restart, when loop period exceed
 #define PERIOD_TASK_STATUSLED 200
-#define PERIOD_TASK_EFFECT 25
+#define PERIOD_TASK_EFFECT 50    //25 for 100led 
 #define PERIOD_TASK_BUTTON 200
 #define PERIOD_TASK_UPDATEWS 80
 
@@ -158,6 +158,9 @@ typedef uint16_t u16_t;
 #define SERIALLN
 #define SERIALPRINTD(x, y)
 #endif
+
+#ifndef _un_color32_
+#define _un_color32_
 union un_color32 {
     uint32_t c32;
     struct
@@ -168,6 +171,8 @@ union un_color32 {
         uint8_t id;
     } c8;
 };
+#endif
+
 #define MAX_MIDDLEPOINTS 10
 struct struct_xmas_stripe
 {

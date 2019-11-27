@@ -328,12 +328,6 @@ void PixEffect(u8_t effno)
     fase++;
     break; //end EFF_MP_RED
   case EFF_MP_LINE:
-    PixFadeAll(2);
-    if (!random(4))
-    {
-      PixSmooth();
-      break;
-    }
     direction = (MAX_MIDDLEPOINTS)-random(MAX_MIDDLEPOINTS * 2);
     lastcol32 = HueToRGB32(random(HUE_MAX), 255, 128 + random(127));
     PixFadeAll(2);
@@ -372,13 +366,6 @@ void PixEffect(u8_t effno)
     direction = random(fase * 3);
     break; // end EFF_MP_BARS
   case EFF_MP_HORX:
-    colsat++;
-    if (colsat > 5)
-    {
-      colsat = 0;
-    }
-    else
-      break;
     fase++;
     if (fase > linebuffcount)
       fase = 0;

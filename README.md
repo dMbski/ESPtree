@@ -1,18 +1,23 @@
 # ESPtree
-another ESP8266 controller for neopixels strip, with WEB interface and some cool features (own SPI transfer method)
-THIS IS **NOT COMPLETED**... Tested with ESP01 and ESP12. SPI method, works stable (200leds 12ms update time) and will be library for ESP8266 (soon).
+another ESP8266 controller for neopixels strip, with (ugly but functional) WEB interface and some cool features (own SPI transfer method)
+THIS IS **NOT COMPLETED**... Tested with ESP01 and ESP12. SPI method, works stable (300leds 17ms update time).
 >big mess in source, *but yet usable* ;-)
 >
 ><img width="300" src="https://github.com/dMbski/ESPtree/blob/master/screens/Schowek01.jpg" /> <img height="400" src="https://github.com/dMbski/ESPtree/blob/master/screens/Schowek02.jpg" /><img width="300" src="https://github.com/dMbski/ESPtree/blob/master/screens/Schowek03.jpg" />
 ><img width="300" src="https://github.com/dMbski/ESPtree/blob/master/screens/Schowek04.jpg" /><img width="300" src="https://github.com/dMbski/ESPtree/blob/master/screens/Schowek05.jpg" />
 
-#### Use library Adafruit or NeoPixelBus or even SPI transfer (emulated WS signal w). 
+#### Use library Adafruit or NeoPixelBus or even _SPI_ transfer (emulated WS signal). 
 Select library in file helpers.cpp. 
 With *Adafruit NeoPixel* library, **pin, quantity and color type of leds** are changable at runtime via WEB.
 
-(Recomended this method)With *SPI_transfer*, **type and quantity of leds** are changable either.
+(Recomend this method)With *SPI_transfer*, **type and quantity of leds** are changable either.
 
-SPI transfer uses small HSPI fifo buffer (60 from 64bytes) to buffer data for 5 leds. HSPI speed is calculated for 160MHZ CPU (for 80MHz use 5/4). WS signal is created by simulate WS timing in 4bit SPI data (1 led in 3 x uint32) and is generated via MOSI pin. Just connect it to WS281x DIN pin. I use simple transistor voltage level shifter.
+SPI transfer uses small HSPI fifo buffer (60 from 64bytes) to buffer data for 5 leds. HSPI speed is calculated for 160MHZ CPU (80MHz works too), there is compiller meseage with SPI speed. WS signal is created by simulate WS timing in 4bit SPI data (1 led in 3 x uint32) and is generated via MOSI pin. Just connect it to WS281x DIN pin. I use simple transistor voltage level shifter.
+
+Standard SPI.writebytes does not work at all. Worked only with SPI.write32.
+
+I wanted to use https://github.com/MetalPhreak/ESP8266_SPI_Driver but finally had to write own methods to transfer.
+Thanks to His library I wrote my SPI method. 
 
 Every method has cons and pros.
 

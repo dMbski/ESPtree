@@ -2,7 +2,6 @@
 #define HELPERS_CPP
 #include <Arduino.h>
 #include <c_types.h>
-//#include <netif/ppp/ccp.h>
 #ifndef u8_t
 typedef uint8_t u8_t;
 typedef uint16_t u16_t;
@@ -17,48 +16,62 @@ typedef uint16_t u16_t;
 //#define USE_NEOPIXELBUS
 #define USE_SPITRANSFER //use hspi bus pin mosi gpio13 to output data 
                         //no need to additional buffer but spi (all pins)is not usable for other purposes
+//#define USE_I2STRANSFER //use i2s bus pin SD gpio3 (RX0) to output data, rest pins SCK gpio15, WS gpio2
+//not implemented yet
 
 //#define USE_FTPSRV    //NOT implemented:USE ftp_server with spiff
 // #define USE_SPIFFS   //NOT implemented: plan to move pages to spiff and complie to http use flash or spiff
 //should then be a warning-info page, when there is nothing on spiff to serve
 
 //#define USE_SERIAL //comment this to disable serial communications (maybe for fastled?)
-#define USE_WPS        //uncomment this for use WPS not tested, problem with VSS
+#define USE_WPS        //uncomment this for use WPS not tested
 #define USE_OTA //uncomment to use OTA httpupdate with link /DEF_XMAS_OTAPATH
 //#define USE_MDNS //uncomment to use mDNS service for web DEF_XMAS_HOSTNAME.local
 
+//buttons active low
 #define USE_KEY //use gpio0 key to change mode-effect
 #define USE_KEY_GPIO 0
+
+//used to enable WPS at boot, prev mode, effect
+#define USE_KEYC    
+#define USE_KEYC_GPIO   4
+
 
 #define LEDSTATUS_PIN  2//use buildin led -LED_BUILTIN
 
 #if defined(USE_ADA_NEOPIXEL)
 #undef USE_NEOPIXELBUS
 #undef USE_SPITRANSFER
+#undef USE_I2STRANSFER
 #include <Adafruit_NeoPixel.h>
 #elif defined(USE_NEOPIXELBUS)
 #undef USE_ADA_NEOPIXEL
 #undef USE_SPITRANSFER
+#undef USE_I2STRANSFER
 #include <NeoPixelBus.h>
 #elif defined(USE_SPITRANSFER)
 #undef USE_NEOPIXELBUS
 #undef USE_ADA_NEOPIXEL
-//#include <SPI.h>
+#undef USE_I2STRANSFER
+
 #ifndef HSPI
 #define HSPI 1
 #endif
-
+#elif defined(USE_I2STRANSFER)
+#undef USE_NEOPIXELBUS
+#undef USE_ADA_NEOPIXEL
+#undef USE_SPITRANSFER
 #else
-#error Uncomment one method to use: Adafruit, NeopixelBus, SPI.
+#error Uncomment one method to use: Adafruit, NeopixelBus, SPI, I2S.
 #endif
 
 #ifdef USE_NEOPIXELBUS
-#define NP_LEDSCOUNTMAX 200 //create neopixelbus with buffor for amount
+#define NP_LEDSCOUNTMAX 300 //create neopixelbus with buffor for amount
 //pick relevant to method U use, UART1 on D4 pin
-#define NP_LEDPIN 2
-#define NP_METHOD NeoEsp8266Uart1800KbpsMethod
+//#define NP_LEDPIN 2
+//#define NP_METHOD NeoEsp8266Uart1800KbpsMethod
 //ESP DMA   on RXpin
-//#define NP_METHOD       NeoEsp8266Dma800KbpsMethod
+#define NP_METHOD       NeoEsp8266Dma800KbpsMethod
 //#define NP_LEDPIN       3
 #define NP_FEATURE NeoRgbFeature
 #endif

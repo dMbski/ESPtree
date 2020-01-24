@@ -14,8 +14,9 @@
 #elif defined(USE_NEOPIXELBUS)
 #include <NeoPixelBus.h>
 #elif defined(USE_SPITRANSFER)
-#include "esp_to_ws281x.h"
-
+#include "espspi_to_ws281x.h"
+#elif  defined(USE_I2STRANSFER)
+#include "ws2812_i2s.h"
 #endif
 
 #ifdef USE_MDNS
@@ -51,10 +52,12 @@ void Task_StatusLED();
 void Task_Effect();
 void Task_BufferToStrip();
 void Task_UpdateWS();
-#ifdef USE_KEY
+#if defined(USE_KEY) || defined(USE_KEYC)
 void Task_Button();
 #endif
+
 void NextEffect();
+void PrevEffect();
 String NeoPixeltypeToStr(uint16_t pt);
 //configuration, check in helpers.cpp
 
@@ -70,9 +73,9 @@ Adafruit_NeoPixel *ALEDStrip1;
 #elif defined(USE_NEOPIXELBUS)
 NeoPixelBus<NP_FEATURE, NP_METHOD> NPLEDStrip1(NP_LEDSCOUNTMAX, NP_LEDPIN);
 #elif defined(USE_SPITRANSFER)
-inline uint32_t setNibble(uint32_t innumber, uint32_t nibble, uint8_t nonibb);
-uint32_t byteToWSpacket(uint8_t b);
 void TaskUpdateSPI();
+#elif defined(USE_I2STRANSFER)
+
 #endif
 
 u8_t LEDStripIsDirty = false;
@@ -112,8 +115,12 @@ void setup()
   WiFi.persistent(false); //dont store wifi config in sdk flash, we'll take of that
   pinMode(LEDSTATUS_PIN, OUTPUT);
 #ifdef USE_KEY
-  pinMode(USE_KEY_GPIO, INPUT_PULLUP);
+  pinMode(USE_KEY_GPIO, INPUT);
 #endif
+#ifdef USE_KEYC
+  pinMode(USE_KEYC_GPIO, INPUT);
+#endif
+
   EEPROM.begin(EEPROM_SIZE);
   EEPROM.get(EEPROM_START, Xmas); //loads config from eeporm
   SERIALPRINTF("\r\nRead & check config from eeprom...");
@@ -138,6 +145,8 @@ void setup()
   NPLEDStrip1.Show();
 #elif defined(USE_SPITRANSFER)
   prepareHSPI();
+#elif defined(USE_I2STRANSFER) 
+
 #endif
 
   PixBuffer = new un_color32[PixBuffCount];
@@ -163,6 +172,8 @@ void loop()
     NPLEDStrip1.Show();
 #elif defined(USE_SPITRANSFER)
     TaskUpdateSPI();
+#elif defined(USE_I2STRANSFER)
+    TaskUpdateI2S();    
 #endif
     LEDStripIsDirty = false;
   };
@@ -186,7 +197,7 @@ void loop()
     Task_Wifi();
     Enter_TaskWifi = millis() + PERIOD_TASK_WIFI;
   };
-#ifdef USE_KEY
+#if defined(USE_KEY) || defined(USE_KEYC)
   if (millis() > Enter_TaskButton)
   {
     Task_Button();
@@ -324,6 +335,15 @@ void TaskUpdateSPI()
 }
 
 #endif
+#ifdef USE_I2STRANSFER
+//------------------
+void TaskUpdateI2S()
+{
+  //sendI2S(I2S_Buffer, PixBuffer, PixBuffCount, Xmas.Stripe1.neoPixelType, TaskEffectPFStrip1);
+}
+
+#endif
+
 //----------------
 void Task_BufferToStrip()
 {
@@ -374,6 +394,18 @@ void NextEffect()
   TaskEffectChange = millis() + Xmas.EffectTimeoutMs;
   SERIALPRINTD("\r\nNext effect no:", TaskEffectId);
 }
+//-----------------
+void PrevEffect()
+{
+  if (TaskEffectId >= 1)
+
+    TaskEffectId--;
+  else
+    TaskEffectId = EFFECTS_COUNT - 1;
+  TaskEffectChange = millis() + Xmas.EffectTimeoutMs;
+  SERIALPRINTD("\r\nPrev effect no:", TaskEffectId);
+}
+
 //---------------
 void ChangeEffect(u8_t effid)
 {
@@ -501,18 +533,40 @@ void Task_StatusLED()
   LedStatus = !LedStatus;
 }
 //-------------
-#ifdef USE_KEY
+#if defined(USE_KEY) || defined(USE_KEYC)
 void Task_Button()
 {
-  static uint8_t lst;
-  uint8_t ast = digitalRead(USE_KEY_GPIO);
-  if (ast == lst)
+  if ((WlanStatus < WLAN_STA_RUN) || ((WlanStatus >= WLAN_WPS_BEGIN) && (WlanStatus <= WLAN_WPS_END)))
+    return; //dont use when initiate
+  uint8_t ast;
+#ifdef USE_KEY
+  static uint8_t lst0;
+  ast = digitalRead(USE_KEY_GPIO);
+  if (ast == lst0)
   {
     ast = !ast;
     if (ast)
+    {
       NextEffect();
+      PixFill(COL_BLACK);
+    }
   }
-  lst = ast;
+  lst0 = ast;
+#endif
+#ifdef USE_KEYC
+  static uint8_t lst1;
+  ast = digitalRead(USE_KEYC_GPIO);
+  if (ast == lst1)
+  {
+    ast = !ast;
+    if (ast)
+    {
+      PrevEffect();
+      PixFill(COL_WHITE);
+    }
+  }
+  lst1 = ast;
+#endif
 }
 #endif
 //-------------
@@ -523,6 +577,14 @@ void Task_Wifi()
   {
   case WLAN_INIT:
     SERIALPRINTF("\r\nTaskWifi: WLAN_INIT");
+#if defined(USE_KEYC) && defined(USE_WPS)
+    if (!digitalRead(USE_KEYC_GPIO))
+    {
+      SERIALPRINTF("\r\nTaskWifi: Used button, entering WPS");
+      WlanStatus = WLAN_WPS_BEGIN;
+      break;
+    }
+#endif
     if (WiFi.getMode() != WIFI_STA)
     {
       SERIALPRINTF("\r\nChange mode to WIFI_STA...");

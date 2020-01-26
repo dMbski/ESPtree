@@ -51,13 +51,20 @@ To run this project in Arduino IDE, just copy /src folder to Arduino's sketches 
 - ESP12e -all features
 
 **TODO** (some ideas):
--clean code mess
--fully implement different types of leds (color type) in string (id could be used)
--**implement SPIFF** webpages
--implement SPIFF graphics and animations
--system cfg on SPIFF ()
--implement some sound depending effects (VU meter, brightness, etc)
--effects playlist (SPIFF file)
+>-clean code mess
+
+>-fully implement different types of leds (color type) in string (id could be used)
+
+>-**implement SPIFF** webpages
+
+>-implement SPIFF graphics and animations
+
+>-system cfg on SPIFF ()
+
+>-implement some sound depending effects (VU meter, brightness, etc)
+
+>-effects playlist (SPIFF file)
+
 
 
 firmware.bin - compiled for ESP12, use SPI method.

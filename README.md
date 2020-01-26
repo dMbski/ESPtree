@@ -35,7 +35,7 @@ Beware, when use pin used to connectivity *ex. NeoEsp8266Dma800KbpsMethod needs 
 Firmware update via httpupdate from configtree page (at the bottom). See credentials data from helpers.cpp (admin,admin).
 #### WebSockets ?
 Works in all aspects (sending parameters, led data) but...
-When sending data has low speed just interferes with other functions. There are some glitches then, even WDT resets. 
+When sending data has low speed just interferes with other functions (mostly on preview leds). There are some glitches then, even WDT resets. Works best with i2s method.
 There is feature when cycle is to long *(4xPERIOD_TASK_WIFI)* twice , resets ESP. 
 #### Use key to change effect.
 I tested this on MCU v2 clone with key marked Flash which is connected to GPIO0. Changable in helpers.cpp (USE_KEY_GPIO). Enabled INPUT_PULLUP.
@@ -49,5 +49,15 @@ To run this project in Arduino IDE, just copy /src folder to Arduino's sketches 
 #### Usable and tested only with esp8266:
 - ESP01 module -need to disable OTA, no need to use SPIFF (all pages in flash);
 - ESP12e -all features
+
+**TODO** (some ideas):
+-clean code mess
+-fully implement different types of leds (color type) in string (id could be used)
+-**implement SPIFF** webpages
+-implement SPIFF graphics and animations
+-system cfg on SPIFF ()
+-implement some sound depending effects (VU meter, brightness, etc)
+-effects playlist (SPIFF file)
+
 
 firmware.bin - compiled for ESP12, use SPI method.

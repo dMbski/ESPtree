@@ -6,11 +6,11 @@ THIS IS **NOT COMPLETED**... Tested with ESP01 and ESP12. SPI method, works stab
 ><img width="300" src="https://github.com/dMbski/ESPtree/blob/master/screens/Schowek01.jpg" /> <img height="400" src="https://github.com/dMbski/ESPtree/blob/master/screens/Schowek02.jpg" /><img width="300" src="https://github.com/dMbski/ESPtree/blob/master/screens/Schowek03.jpg" />
 ><img width="300" src="https://github.com/dMbski/ESPtree/blob/master/screens/Schowek04.jpg" /><img width="300" src="https://github.com/dMbski/ESPtree/blob/master/screens/Schowek05.jpg" />
 
-#### Use library Adafruit or NeoPixelBus or even _SPI_ transfer (emulated WS signal). 
+#### Use library Adafruit or _SPI_ or _i2s_transfer (emulated WS signal). 
 Select library in file helpers.cpp. 
 With *Adafruit NeoPixel* library, **pin, quantity and color type of leds** are changable at runtime via WEB.
 
-_(Recomend this method)_ With *SPI_transfer*, **type and quantity of leds** are changable either.
+_(Recomend this methods)_ With *SPI_transfer* or *I2S_transfer*, **type and quantity of leds** are changable either.
 
 SPI transfer uses small HSPI fifo buffer (60 from 64bytes) to buffer data for 5 leds. HSPI speed is calculated for 160MHZ CPU (80MHz works too), there is compiller message with SPI speed. WS signal is created by simulate WS timing in 4bit SPI data (1 led in 3 x uint32) and is generated via MOSI pin. Just connect it to WS281x DIN pin. 
 
@@ -25,6 +25,8 @@ Only SPI.write32 works. Just set SPI freq around 3.2MHz and send wspacket prepar
 
 I wanted to use https://github.com/MetalPhreak/ESP8266_SPI_Driver but finally had to write own method to transfer without waiting for ends.
 Thanks to His library I wrote my SPI method to send data with HSPI buffer. 
+
+I2S_transfer uses large RAM buffer for DMA transfer. This method is _copied_ from NeoPixelBus library (https://github.com/Makuna/NeoPixelBus). I do this because of changes type and quantity of leds at runtime.
 
 Every method has cons and pros.
 

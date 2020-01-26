@@ -11,13 +11,14 @@ typedef uint16_t u16_t;
 #define SERVER_WS_PORT 81
 #define SERVER_HTML_PORT 80
 
+
+
 /* Use only one library bellow. Comment one*/
 //#define USE_ADA_NEOPIXEL
-//#define USE_NEOPIXELBUS
-#define USE_SPITRANSFER //use hspi bus pin mosi gpio13 to output data 
-                        //no need to additional buffer but spi (all pins)is not usable for other purposes
-//#define USE_I2STRANSFER //use i2s bus pin SD gpio3 (RX0) to output data, rest pins SCK gpio15, WS gpio2
-//not implemented yet
+//#define USE_SPITRANSFER //use hspi bus pin mosi gpio13 D7 to output data 
+                        //no need to additional buffer but spi (all pins?)is not usable for other purposes
+                        //with some hardware it is usable for other purposes-should disable sending WS data
+#define USE_I2STRANSFER //use i2s bus pin SD gpio3 (RXD0 ) to output data, rest pins SCK gpio15, WS gpio2
 
 //#define USE_FTPSRV    //NOT implemented:USE ftp_server with spiff
 // #define USE_SPIFFS   //NOT implemented: plan to move pages to spiff and complie to http use flash or spiff
@@ -40,15 +41,9 @@ typedef uint16_t u16_t;
 #define LEDSTATUS_PIN  2//use buildin led -LED_BUILTIN
 
 #if defined(USE_ADA_NEOPIXEL)
-#undef USE_NEOPIXELBUS
 #undef USE_SPITRANSFER
 #undef USE_I2STRANSFER
 #include <Adafruit_NeoPixel.h>
-#elif defined(USE_NEOPIXELBUS)
-#undef USE_ADA_NEOPIXEL
-#undef USE_SPITRANSFER
-#undef USE_I2STRANSFER
-#include <NeoPixelBus.h>
 #elif defined(USE_SPITRANSFER)
 #undef USE_NEOPIXELBUS
 #undef USE_ADA_NEOPIXEL
@@ -58,23 +53,12 @@ typedef uint16_t u16_t;
 #define HSPI 1
 #endif
 #elif defined(USE_I2STRANSFER)
-#undef USE_NEOPIXELBUS
 #undef USE_ADA_NEOPIXEL
 #undef USE_SPITRANSFER
 #else
 #error Uncomment one method to use: Adafruit, NeopixelBus, SPI, I2S.
 #endif
 
-#ifdef USE_NEOPIXELBUS
-#define NP_LEDSCOUNTMAX 300 //create neopixelbus with buffor for amount
-//pick relevant to method U use, UART1 on D4 pin
-//#define NP_LEDPIN 2
-//#define NP_METHOD NeoEsp8266Uart1800KbpsMethod
-//ESP DMA   on RXpin
-#define NP_METHOD       NeoEsp8266Dma800KbpsMethod
-//#define NP_LEDPIN       3
-#define NP_FEATURE NeoRgbFeature
-#endif
 
 #ifndef USE_ADA_NEOPIXEL
 /*  Definitions from the Adafruit NeoPixel library. Need for some functions.*/
@@ -150,7 +134,7 @@ typedef uint16_t u16_t;
 //constats for entering task periods (ms )
 #define PERIOD_TASK_WIFI 500 // controlls restart, when loop period exceed
 #define PERIOD_TASK_STATUSLED 200
-#define PERIOD_TASK_EFFECT 50    //25 for 100led 
+#define PERIOD_TASK_EFFECT 25    //25 for 100led or i2s (50 for 300leds)
 #define PERIOD_TASK_BUTTON 200
 #define PERIOD_TASK_UPDATEWS 80
 

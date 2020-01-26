@@ -11,12 +11,12 @@
 #include "ledeffects.h"
 #if defined(USE_ADA_NEOPIXEL)
 #include <Adafruit_NeoPixel.h>
-#elif defined(USE_NEOPIXELBUS)
-#include <NeoPixelBus.h>
 #elif defined(USE_SPITRANSFER)
 #include "espspi_to_ws281x.h"
 #elif  defined(USE_I2STRANSFER)
-#include "ws2812_i2s.h"
+#include "espi2s_to_ws281x.h"
+//it is from NeoPixel library helper functions for Esp8266.
+// (see https://github.com/Makuna/NeoPixelBus) - with some changes
 #endif
 
 #ifdef USE_MDNS
@@ -70,12 +70,10 @@ ESP8266HTTPUpdateServer ServerHttpOTA;
 
 #if defined(USE_ADA_NEOPIXEL)
 Adafruit_NeoPixel *ALEDStrip1;
-#elif defined(USE_NEOPIXELBUS)
-NeoPixelBus<NP_FEATURE, NP_METHOD> NPLEDStrip1(NP_LEDSCOUNTMAX, NP_LEDPIN);
 #elif defined(USE_SPITRANSFER)
 void TaskUpdateSPI();
 #elif defined(USE_I2STRANSFER)
-
+void TaskUpdateI2S();
 #endif
 
 u8_t LEDStripIsDirty = false;
@@ -138,15 +136,10 @@ void setup()
   ALEDStrip1->begin();
   ALEDStrip1->clear();
   ALEDStrip1->show();
-#elif defined(USE_NEOPIXELBUS)
-  if (PixBuffCount > NP_LEDSCOUNTMAX)
-    PixBuffCount = NP_LEDSCOUNTMAX;
-  NPLEDStrip1.Begin();
-  NPLEDStrip1.Show();
 #elif defined(USE_SPITRANSFER)
   prepareHSPI();
 #elif defined(USE_I2STRANSFER) 
-
+  prepareI2S(PixBuffCount);
 #endif
 
   PixBuffer = new un_color32[PixBuffCount];
@@ -168,8 +161,6 @@ void loop()
   {
 #if defined(USE_ADA_NEOPIXEL)
     ALEDStrip1->show();
-#elif defined(USE_NEOPIXELBUS)
-    NPLEDStrip1.Show();
 #elif defined(USE_SPITRANSFER)
     TaskUpdateSPI();
 #elif defined(USE_I2STRANSFER)
@@ -315,13 +306,12 @@ void xmas_printcfg(struct_xmas_config *cfg)
   SERIALPRINTD("\r\nStripe1.PinNo:", cfg->Stripe1.PinNo);
   SERIALPRINTD("\r\nStripe1.neoPixelType:", NeoPixeltypeToStr(cfg->Stripe1.neoPixelType));
   //TODO: add middlepoints
-#if defined(USE_NEOPIXELBUS)
-  SERIALPRINTF("\r\nUse NeoPixelBus library. Check in source for details.");
-  SERIALPRINTD("\r\nMaximum Leds count: ", NP_LEDSCOUNTMAX);
-  SERIALPRINTD("\r\nUSing pin no: ", NP_LEDPIN);
-#elif defined(USE_SPITRANSFER)
+#if defined(USE_SPITRANSFER)
   SERIALPRINTF("\r\nUse SPI. Check source for details");
   SERIALPRINTF("\r\nUsing pin MOSI-GPIO13 for dataout.");
+#elif defined(USE_I2STRANSFER)
+  SERIALPRINTF("\r\nUse i2s DMA. Check source for details");
+  SERIALPRINTF("\r\nUsing pin RX-GPIO3 for dataout.");  
 #elif defined(USE_ADA_NEOPIXEL)
   SERIALPRINTF("\r\nUse Adafruit NeoPixel library.");
 #endif
@@ -336,10 +326,9 @@ void TaskUpdateSPI()
 
 #endif
 #ifdef USE_I2STRANSFER
-//------------------
 void TaskUpdateI2S()
 {
-  //sendI2S(I2S_Buffer, PixBuffer, PixBuffCount, Xmas.Stripe1.neoPixelType, TaskEffectPFStrip1);
+  sendI2S(PixBuffer, PixBuffCount, Xmas.Stripe1.neoPixelType, TaskEffectPFStrip1);
 }
 
 #endif
@@ -353,7 +342,7 @@ void Task_BufferToStrip()
   {
     cc = PixBuffer[i];
     allpix = allpix + cc.c8.r + cc.c8.g + cc.c8.b;
-#if defined(USE_ADA_NEOPIXEL) || defined(USE_NEOPIXELBUS)
+#if defined(USE_ADA_NEOPIXEL)
     if (TaskEffectPFStrip1 < 100)
     {
       cc.c8.r = (cc.c8.r * TaskEffectPFStrip1) / 100;
@@ -363,8 +352,6 @@ void Task_BufferToStrip()
 #endif
 #if defined(USE_ADA_NEOPIXEL)
     ALEDStrip1->setPixelColor(i, cc.c8.r, cc.c8.g, cc.c8.b);
-#elif defined(USE_NEOPIXELBUS)
-    NPLEDStrip1.SetPixelColor(i, RgbColor(cc.c8.r, cc.c8.g, cc.c8.b));
 #endif
     yield();
   }
@@ -959,15 +946,10 @@ void servers_handleInfoString()
   //stripeinfo
 #if defined(USE_ADA_NEOPIXEL)
   StrBuffer1.concat(F(";}{Use Adafruit NeoPixel;;}"));
-#elif defined(USE_NEOPIXELBUS)
-  StrBuffer1.concat(F(";}{Use NeoPixelBus library;Pin and pixeltype changable in; source only.}"));
-  StrBuffer1.concat(F("{Maximum Leds;"));
-  StrBuffer1.concat(NP_LEDSCOUNTMAX);
-  StrBuffer1.concat(F(";}{Using pin no:;"));
-  StrBuffer1.concat(NP_LEDPIN);
-  StrBuffer1.concat(F(";changable in source only.}"));
 #elif defined(USE_SPITRANSFER)
   StrBuffer1.concat(F(";}{Use SPI transfer;Pin SPI-MOSI;GPIO13}"));
+#elif defined(USE_SPITRANSFER)
+  StrBuffer1.concat(F(";}{Use i2s transfer;Pin i2s-sdo;GPIO3}"));
 #endif
   StrBuffer1.concat(F("{Max Effect Processing Time:;"));
   StrBuffer1.concat(TaskEffectProcTimeMax);

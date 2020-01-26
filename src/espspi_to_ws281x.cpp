@@ -1,5 +1,5 @@
-#ifndef _ESP_TO_WS_CPP_
-#define _ESP_TO_WS_CPP_
+#ifndef _ESPSPI_TO_WS_CPP_
+#define _ESPSPI_TO_WS_CPP_
 
 #include "espspi_to_ws281x.h"
 
@@ -40,6 +40,7 @@ void prepareHSPI()
   CLEAR_PERI_REG_MASK(SPI_USER(HSPI), SPI_CK_OUT_EDGE | SPI_CS_SETUP | SPI_CS_HOLD | SPI_FLASH_MODE | SPI_QIO_MODE | SPI_DIO_MODE | SPI_DOUT_MODE | SPI_QOUT_MODE);
 }
 //---------------------------------
+//sets nibble (4bits) no nonibb (0-7) in innumber (32bits) 
 inline uint32_t ICACHE_RAM_ATTR setNibble(uint32_t innumber, uint32_t nibble, uint8_t nonibb)
 {
   nibble = (nibble & 0xF) << (4 * nonibb);

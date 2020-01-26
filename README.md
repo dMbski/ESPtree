@@ -51,6 +51,8 @@ To run this project in Arduino IDE, just copy /src folder to Arduino's sketches 
 - ESP12e -all features
 
 **TODO** (some ideas):
+>-change the way WS works when sending data (multiple leds at once, but with timing correction)
+
 >-clean code mess
 
 >-fully implement different types of leds (color type) in string (id could be used)

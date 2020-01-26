@@ -2,7 +2,7 @@
 #define _ESPI2S_TO_WS_CPP_
 //its all copied (some changes to work with dynamically changed type and count leds)
 //  from NeoPixel library - (see https://github.com/Makuna/NeoPixelBus)
-//  MUUch thx for Creator of NeoPixel library
+//  MUUch thx for Creator of NeoPixelBus library
 #include "Arduino.h"
 #include "osapi.h"
 #include "ets_sys.h"
@@ -20,8 +20,8 @@
 
 #define BytesPerPixel 3
 
-const static uint32_t I2sClockDivisor = 3;
-const static uint32_t I2sBaseClockDivisor = 16;
+const static uint32_t I2sClockDivisor = 7; //ws2812 3  ws2811  5
+const static uint32_t I2sBaseClockDivisor = 8; //ws2812 16  ws2811 16
 
 const uint16_t c_maxDmaBlockSize = 4095;
 const uint16_t c_dmaBytesPerPixelBytes = 4;

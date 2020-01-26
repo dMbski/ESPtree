@@ -18,15 +18,13 @@ This implementation takes over SPI (MOSI pin) and is not usable as proper SPI bu
 To use SPI with another device, AND gate is needed. To simulate CS (active high) connect to A, B to MOSI-this could be TTL level shifter either.
 
 I use simple transistor voltage level shifter.
+>
+>Standard SPI.writebytes does not work at all. Only SPI.write32 works. Just set SPI freq around 3.2MHz and send wspacket prepared by _prepareSPIpacket()_ function.
+>I wanted to use https://github.com/MetalPhreak/ESP8266_SPI_Driver but finally had to write own method to transfer without waiting for ends.
+>Thanks to His library I wrote my SPI method to send data with HSPI buffer. 
+>
 
-Standard SPI.writebytes does not work at all.
-
-Only SPI.write32 works. Just set SPI freq around 3.2MHz and send wspacket prepared by _prepareSPIpacket()_ function.
-
-I wanted to use https://github.com/MetalPhreak/ESP8266_SPI_Driver but finally had to write own method to transfer without waiting for ends.
-Thanks to His library I wrote my SPI method to send data with HSPI buffer. 
-
-I2S_transfer uses large RAM buffer for DMA transfer. This method is _copied_ from NeoPixelBus library (https://github.com/Makuna/NeoPixelBus). I do this because of changes type and quantity of leds at runtime.
+**I2S_transfer** uses large RAM buffer for DMA transfer. This method is _copied_ from NeoPixelBus library (https://github.com/Makuna/NeoPixelBus) and little changed. I _borrowed_ it because of need to change the type and number of leds during runtime.
 
 Every method has cons and pros.
 

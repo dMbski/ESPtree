@@ -10,7 +10,7 @@ THIS IS **NOT COMPLETED**... Tested with ESP01 and ESP12. SPI method, works stab
 Select library in file helpers.cpp. 
 With *Adafruit NeoPixel* library, **pin, quantity and color type of leds** are changable at runtime via WEB.
 
-_(Recomend this methods)_ With *SPI_transfer* or *I2S_transfer*, **type and quantity of leds** are changable either.
+With *SPI_transfer* or *I2S_transfer*, **type and quantity of leds** are changable either.
 
 SPI transfer uses small HSPI fifo buffer (60 from 64bytes) to buffer data for 5 leds. HSPI speed is calculated for 160MHZ CPU (80MHz works too), there is compiller message with SPI speed. WS signal is created by simulate WS timing in 4bit SPI data (1 led in 3 x uint32) and is generated via MOSI pin. Just connect it to WS281x DIN pin. 
 

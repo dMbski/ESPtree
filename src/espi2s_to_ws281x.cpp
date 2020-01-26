@@ -329,7 +329,7 @@ void sendI2S(un_color32 *rgbdata32, uint32_t pixelcount, uint8_t neo_type, uint8
   for (uint16_t i = 0; i < pixelcount; i++)
   {
     prepareI2Spacket(&rgbdata32[i], &pDma[i * 3], neo_type, powerfactor);
-    if (i % 155)
+    if (!(i % 100))
       yield();
   }
 

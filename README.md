@@ -30,9 +30,11 @@ Every method has cons and pros.
 
 Choose wisely.
 #### Support for required max amperage draw, with correction (PowerFactor).
-Beware, when use pin used to connectivity *ex. NeoEsp8266Dma800KbpsMethod needs UART0 RX pin -GPIO3 (which is used also to upload firmware)* strip will lights without control.
+**Watch out**, i2s share pin with UART0 RX -GPIO3 (which is used also to upload firmware) strip will lights without control.
+I use OTA programming (fast and reliable).
 #### Support for OTA.
 Firmware update via httpupdate from configtree page (at the bottom). See credentials data from helpers.cpp (admin,admin).
+Take firmware.BIN after compling in VSC (.pio\build\esp12e\ ).
 #### WebSockets ?
 Works in all aspects (sending parameters, led data) but...
 When sending data has low speed just interferes with other functions (mostly on preview leds). There are some glitches then, even WDT resets. Works best with i2s method.

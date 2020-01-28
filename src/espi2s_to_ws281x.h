@@ -40,9 +40,9 @@ union un_color32 {
 #endif
 
 void prepareI2S(uint32_t pixelcount);
-//  Sends rgb values from rgbdata over HSPI from un_color24
+//  returns power in mA
 //  powerfactor - 100 skips this percentage of value to set when sending (good for power or global brightness steering)
-//  Sends rgb values from rgbdata over HSPI from un_color32
-void sendI2S(un_color32 *rgbdata32, uint32_t pixelcount, uint8_t neo_type, uint8_t powerfactor);
+//  Sends rgb values from rgbdata over i2s from un_color32
+uint32_t sendI2S(un_color32 *rgbdata32, uint32_t pixelcount, uint8_t neo_type, uint8_t powerfactor);
 
 #endif

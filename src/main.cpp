@@ -13,7 +13,7 @@
 #include <Adafruit_NeoPixel.h>
 #elif defined(USE_SPITRANSFER)
 #include "espspi_to_ws281x.h"
-#elif  defined(USE_I2STRANSFER)
+#elif defined(USE_I2STRANSFER)
 #include "espi2s_to_ws281x.h"
 //it is from NeoPixel library helper functions for Esp8266.
 // (see https://github.com/Makuna/NeoPixelBus) - with some changes
@@ -42,7 +42,9 @@ extern char page_configshow[];
 String EncryptionToStr(uint8_t enctype);
 void xmas_resetconfig();
 void xmas_writeconfig(u8 wifimode);
+#ifdef USE_SERIAL
 void xmas_printcfg(struct_xmas_config *cfg);
+#endif
 void servers_start();
 void servers_stop();
 void servers_config();
@@ -108,8 +110,10 @@ u8_t LedStatus = 0; //just for small light-heartbeat
 
 void setup()
 {
+
   SERIALBEGIN;
   SERIALPRINTF("\r\nStart...");
+
   WiFi.persistent(false); //dont store wifi config in sdk flash, we'll take of that
   pinMode(LEDSTATUS_PIN, OUTPUT);
 #ifdef USE_KEY
@@ -127,7 +131,9 @@ void setup()
     SERIALPRINTF("\r\nMagic or ver are different, reset config to default...");
     xmas_resetconfig();
   }
+#ifdef USE_SERIAL
   xmas_printcfg(&Xmas);
+#endif
   servers_config();
   PixBuffCount = Xmas.Stripe1.LedCounts; //all leds from all strips
 
@@ -138,7 +144,7 @@ void setup()
   ALEDStrip1->show();
 #elif defined(USE_SPITRANSFER)
   prepareHSPI();
-#elif defined(USE_I2STRANSFER) 
+#elif defined(USE_I2STRANSFER)
   prepareI2S(PixBuffCount);
 #endif
 
@@ -164,7 +170,7 @@ void loop()
 #elif defined(USE_SPITRANSFER)
     TaskUpdateSPI();
 #elif defined(USE_I2STRANSFER)
-    TaskUpdateI2S();    
+    TaskUpdateI2S();
 #endif
     LEDStripIsDirty = false;
   };
@@ -286,6 +292,7 @@ String NeoPixeltypeToStr(uint16_t pt)
   return String(pt);
 }
 //------------
+#ifdef USE_SERIAL
 void xmas_printcfg(struct_xmas_config *cfg)
 {
   SERIALPRINTF("\r\nConfig details:");
@@ -311,49 +318,79 @@ void xmas_printcfg(struct_xmas_config *cfg)
   SERIALPRINTF("\r\nUsing pin MOSI-GPIO13 for dataout.");
 #elif defined(USE_I2STRANSFER)
   SERIALPRINTF("\r\nUse i2s DMA. Check source for details");
-  SERIALPRINTF("\r\nUsing pin RX-GPIO3 for dataout.");  
+  SERIALPRINTF("\r\nUsing pin RX-GPIO3 for dataout.");
 #elif defined(USE_ADA_NEOPIXEL)
   SERIALPRINTF("\r\nUse Adafruit NeoPixel library.");
 #endif
 }
+#endif
 //----------------
 #ifdef USE_SPITRANSFER
 //------------------
 void TaskUpdateSPI()
 {
-  sendSPI(PixBuffer, PixBuffCount, Xmas.Stripe1.neoPixelType, TaskEffectPFStrip1);
-}
+  uint32_t powneed;
+  powneed = sendSPI32(PixBuffer, PixBuffCount, Xmas.Stripe1.neoPixelType, TaskEffectPFStrip1);
 
+  if (powneed == 0)
+    TaskEffectPFStrip1 = 100;
+  else if (powneed > Xmas.Stripe1.AmperageMax)
+  {
+    TaskEffectPFStrip1 = (Xmas.Stripe1.AmperageMax * 100) / powneed;
+  }
+  else
+  {
+    TaskEffectPFStrip1 = 100;
+  };
+
+  TaskEffectPowerNeed = (powneed + TaskEffectPowerNeed) / 2;
+}
 #endif
+
 #ifdef USE_I2STRANSFER
 void TaskUpdateI2S()
 {
-  sendI2S(PixBuffer, PixBuffCount, Xmas.Stripe1.neoPixelType, TaskEffectPFStrip1);
-}
+  uint32_t powneed;
+  powneed = sendI2S(PixBuffer, PixBuffCount, Xmas.Stripe1.neoPixelType, TaskEffectPFStrip1);
 
+  if (powneed == 0)
+    TaskEffectPFStrip1 = 100;
+  else if (powneed > Xmas.Stripe1.AmperageMax)
+  {
+    TaskEffectPFStrip1 = (Xmas.Stripe1.AmperageMax * 100) / powneed;
+  }
+  else
+  {
+    TaskEffectPFStrip1 = 100;
+  };
+
+  TaskEffectPowerNeed = (powneed + TaskEffectPowerNeed) / 2;
+}
 #endif
 
 //----------------
 void Task_BufferToStrip()
 {
+//calculations for power are done here only for ada
+//sendspi, sendi2s returns power needed
+#if defined(USE_ADA_NEOPIXEL)
   un_color32 cc;
   uint32_t allpix = 0;
   for (uint16_t i = 0; i < PixBuffCount; i++)
   {
     cc = PixBuffer[i];
     allpix = allpix + cc.c8.r + cc.c8.g + cc.c8.b;
-#if defined(USE_ADA_NEOPIXEL)
+
     if (TaskEffectPFStrip1 < 100)
     {
       cc.c8.r = (cc.c8.r * TaskEffectPFStrip1) / 100;
       cc.c8.g = (cc.c8.g * TaskEffectPFStrip1) / 100;
       cc.c8.b = (cc.c8.b * TaskEffectPFStrip1) / 100;
     };
-#endif
-#if defined(USE_ADA_NEOPIXEL)
+
     ALEDStrip1->setPixelColor(i, cc.c8.r, cc.c8.g, cc.c8.b);
-#endif
-    yield();
+    if (!(i % 100))
+      yield();
   }
   //calc PowerFactor
   allpix = (allpix * 10) / 127;
@@ -369,6 +406,7 @@ void Task_BufferToStrip()
   };
 
   TaskEffectPowerNeed = (allpix + TaskEffectPowerNeed) / 2;
+#endif
   PixBuffIsDirty = false;
   LEDStripIsDirty = true;
 };
@@ -709,7 +747,9 @@ void Task_Wifi()
     strcpy(Xmas.STApass, WiFi.psk().c_str());
     Xmas.WifiMode = WIFI_MODE_STA;
     xmas_writeconfig(WIFI_MODE_STA);
+#ifdef USE_SERIAL
     xmas_printcfg(&Xmas);
+#endif
     servers_start();
     break;
 #endif
@@ -939,17 +979,18 @@ void servers_handleInfoString()
   StrBuffer1.concat(F(";bytes}{Heap Fragmentation:;"));
   StrBuffer1.concat(F(";not supported}{Last Reset Reason:;"));
   StrBuffer1.concat(ESP.getResetReason());
-  StrBuffer1.concat(F(";}{STA SSID to connect:;"));
+  StrBuffer1.concat(F(";}{STA SSID to connect:;<b>"));
   StrBuffer1.concat(Xmas.STAname);
-  StrBuffer1.concat(F(";}{Standalone AP SSID:;<b>"));
+  StrBuffer1.concat(F("</b>;}{Standalone AP SSID:;"));
   StrBuffer1.concat(Xmas.APname);
+  StrBuffer1.concat(F(";}"));
   //stripeinfo
 #if defined(USE_ADA_NEOPIXEL)
-  StrBuffer1.concat(F(";}{Use Adafruit NeoPixel;;}"));
+  StrBuffer1.concat(F("{Use Adafruit NeoPixel;;}"));
 #elif defined(USE_SPITRANSFER)
-  StrBuffer1.concat(F(";}{Use SPI transfer;Pin SPI-MOSI;GPIO13}"));
+  StrBuffer1.concat(F("{Use SPI transfer;Pin SPI-MOSI;GPIO13}"));
 #elif defined(USE_SPITRANSFER)
-  StrBuffer1.concat(F(";}{Use i2s transfer;Pin i2s-sdo;GPIO3}"));
+  StrBuffer1.concat(F("{Use i2s transfer;Pin i2s-sdo;GPIO3}"));
 #endif
   StrBuffer1.concat(F("{Max Effect Processing Time:;"));
   StrBuffer1.concat(TaskEffectProcTimeMax);

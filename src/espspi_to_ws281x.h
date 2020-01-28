@@ -48,12 +48,12 @@ union un_color32 {
 void prepareHSPI();
 //  Sends rgb values from rgbdata over HSPI from un_color24
 //  powerfactor - 100 skips this percentage of value to set when sending (good for power or global brightness steering)
-void sendSPI(un_color24 *rgbdata24, uint32_t pixelcount, uint8_t neo_type, uint8_t powerfactor);
+void sendSPI24(un_color24 *rgbdata24, uint32_t pixelcount, uint8_t neo_type, uint8_t powerfactor);
 inline void prepareSPIpacket(un_color24 *ledcolor, uint32_t *wspack, uint8_t neo_type, uint32_t powerfactor);
 
-// versions for un_color32
+//  Returns powerneed mA
 //  Sends rgb values from rgbdata over HSPI from un_color32
-void sendSPI(un_color32 *rgbdata32, uint32_t pixelcount, uint8_t neo_type, uint8_t powerfactor);
+uint32_t sendSPI32(un_color32 *rgbdata32, uint32_t pixelcount, uint8_t neo_type, uint8_t powerfactor);
 inline void prepareSPIpacket(un_color32 *ledcolor, uint32_t *wspack, uint8_t neo_type, uint32_t powerfactor);
 
 //used privatly

@@ -110,7 +110,7 @@ inline void prepareSPIpacket(un_color24 *ledcolor, uint32_t *wspack, uint8_t neo
 }
 
 //----------------------------------
-void sendSPI(un_color24 *rgbdata24, uint32_t pixelcount, uint8_t neo_type, uint8_t powerfactor)
+void sendSPI24(un_color24 *rgbdata24, uint32_t pixelcount, uint8_t neo_type, uint8_t powerfactor)
 {
   uint32_t wspack[3 * LEDPACK_MAX]; //use 60 from fifo spi 64bytes 1color (1byte)= 1 uint32 (4byte)
   uint32_t i = 0;
@@ -203,7 +203,7 @@ inline void prepareSPIpacket(un_color32 *ledcolor, uint32_t *wspack, uint8_t neo
   }
 }
 
-void sendSPI(un_color32 *rgbdata32, uint32_t pixelcount, uint8_t neo_type, uint8_t powerfactor)
+uint32_t sendSPI32(un_color32 *rgbdata32, uint32_t pixelcount, uint8_t neo_type, uint8_t powerfactor)
 {
   uint32_t wspack[3 * LEDPACK_MAX]; //use 60 from fifo spi 64bytes 1color (1byte)= 1 uint32 (4byte)
   uint32_t i = 0;
@@ -214,6 +214,8 @@ void sendSPI(un_color32 *rgbdata32, uint32_t pixelcount, uint8_t neo_type, uint8
   CLEAR_PERI_REG_MASK(SPI_USER(HSPI), SPI_USR_MOSI | SPI_USR_MISO | SPI_USR_COMMAND | SPI_USR_ADDR | SPI_USR_DUMMY);
 
   SET_PERI_REG_MASK(SPI_USER(HSPI), SPI_USR_MOSI);
+
+  uint32_t allpix = 0;
 
   while (i < pixelcount)
   {
@@ -230,10 +232,16 @@ void sendSPI(un_color32 *rgbdata32, uint32_t pixelcount, uint8_t neo_type, uint8
 
     while (ledinpack < countpackto)
     {
-      prepareSPIpacket(&rgbdata32[i], &wspack[ledinpack * 3], neo_type, powerfactor);
+      un_color32 cc;
+      cc.c32 = rgbdata32[i].c32;
+      //sum all colors
+      allpix = allpix + cc.c8.r + cc.c8.g + cc.c8.b;
+
+      prepareSPIpacket(&cc, &wspack[ledinpack * 3], neo_type, powerfactor);
       ledinpack++;
       i++;
     }
+
     //wait for hspi finish
     while (READ_PERI_REG(SPI_CMD(HSPI)) & SPI_USR)
     {
@@ -241,6 +249,7 @@ void sendSPI(un_color32 *rgbdata32, uint32_t pixelcount, uint8_t neo_type, uint8
     };
     //Number of bits to send via MOSI
     WRITE_PERI_REG(SPI_USER1(HSPI), (((LEDBITSTOSEND(ledinpack) - 1) & SPI_USR_MOSI_BITLEN) << SPI_USR_MOSI_BITLEN_S));
+    
     //copy to HSPI fifo
     for (uint8_t lc = 0; lc < (ledinpack * 3); lc++)
     {
@@ -250,6 +259,11 @@ void sendSPI(un_color32 *rgbdata32, uint32_t pixelcount, uint8_t neo_type, uint8
     SET_PERI_REG_MASK(SPI_CMD(HSPI), SPI_USR); //toggle spi sending
 
   } // end while i
+  
+  //calc power mA
+  allpix = (allpix * 10) / 127;
+  
+  return (allpix);
 }
 #endif
 

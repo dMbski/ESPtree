@@ -20,7 +20,7 @@
 
 #define BytesPerPixel 3
 
-const static uint32_t I2sClockDivisor = 7; //ws2812 3  ws2811  5
+const static uint32_t I2sClockDivisor = 7;     //ws2812 3  ws2811  5
 const static uint32_t I2sBaseClockDivisor = 8; //ws2812 16  ws2811 16
 
 const uint16_t c_maxDmaBlockSize = 4095;
@@ -318,23 +318,34 @@ inline void prepareI2Spacket(un_color32 *ledcolor, uint32_t *wspack, uint8_t neo
   }
 }
 
-void sendI2S(un_color32 *rgbdata32, uint32_t pixelcount, uint8_t neo_type, uint8_t powerfactor)
+uint32_t sendI2S(un_color32 *rgbdata32, uint32_t pixelcount, uint8_t neo_type, uint8_t powerfactor)
 {
   while (!IsReadyToUpdate())
   {
     yield();
   }
+  uint32_t allpix = 0;
   uint32_t *pDma = (uint32_t *)_i2sBuffer;
 
   for (uint16_t i = 0; i < pixelcount; i++)
   {
-    prepareI2Spacket(&rgbdata32[i], &pDma[i * 3], neo_type, powerfactor);
-    if (!(i % 100))
-      yield();
+    un_color32 cc;
+    cc.c32 = rgbdata32[i].c32;
+    //sum all colors
+    allpix = allpix + cc.c8.r + cc.c8.g + cc.c8.b;
+
+    prepareI2Spacket(&cc, &pDma[i * 3], neo_type, powerfactor);
+    if (!(i % 155))
+      yield();  //sometime
   }
+
+  //calc power mA
+  allpix = (allpix * 10) / 127;
 
   // toggle state so the ISR reacts
   _dmaState = NeoDmaState_Pending;
+
+  return (allpix);
 }
 
 #endif

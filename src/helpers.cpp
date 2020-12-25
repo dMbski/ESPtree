@@ -15,10 +15,10 @@ typedef uint16_t u16_t;
 
 /* Use only one library bellow. Comment one*/
 //#define USE_ADA_NEOPIXEL
-#define USE_SPITRANSFER //use hspi bus pin mosi gpio13 D7 to output data 
+//#define USE_SPITRANSFER //use hspi bus pin mosi gpio13 D7 to output data 
                         //no need to additional buffer but spi (all pins?)is not usable for other purposes
                         //with some hardware it is usable for other purposes-should disable sending WS data
-//#define USE_I2STRANSFER //use i2s bus pin SD gpio3 (RXD0 ) to output data, rest pins SCK gpio15, WS gpio2
+#define USE_I2STRANSFER //use i2s bus pin SD gpio3 (RXD0 ) to output data, rest pins SCK gpio15, WS gpio2
 
 //#define USE_FTPSRV    //NOT implemented:USE ftp_server with spiff
 // #define USE_SPIFFS   //NOT implemented: plan to move pages to spiff and complie to http use flash or spiff

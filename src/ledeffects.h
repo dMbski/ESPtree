@@ -2,6 +2,7 @@
 #define LEDEFFECTS_H
 #include "helpers.cpp"
 //functions
+void PixDrawMpXY(int8_t x, int8_t y, uint32_t col32);
 uint32_t HueToRGB32(uint32_t h, uint8_t sat, uint8_t val);
 void PixFill(uint32_t col32);
 void PixScrollUp();
@@ -64,7 +65,7 @@ extern u8_t WlanStatus;
 #define EFF13_NAME F("Vert lines rainbow")
 #define EFF14_NAME F("Horiz rainbow bars")
 #define EFF15_NAME F("Horiz rainbow x")
-#define EFF16_NAME F("Horiz Christmas Bars")
+#define EFF16_NAME F("Splash")
 
 String EffectName(uint8_t no)
 {
@@ -331,11 +332,19 @@ void PixEffect(u8_t effno)
     break; //end EFF_MP_RED
   case EFF_MP_LINE:
 
+    if (colsat > 0) //pause and fade
+    {
+      colsat--;
+      PixFadeAll(1);
+      break;
+    }
+
     if (fase >= (MAX_MIDDLEPOINTS * 2))
     {
       fase = 0;
       PixFill(HueToRGB32(lastcol32, 255, 255));
       lastcol32 = random(HUE_MAX);
+      colsat = random(60);
       break;
     }
     lastled = 0;
@@ -346,7 +355,7 @@ void PixEffect(u8_t effno)
       lastled++;
     }
     fase++;
-    lastcol32 += 4;
+    lastcol32 += HUE_RES;
     break; // end EFF_MP_LINE
   case EFF_MP_BARS:
     PixSmooth();
@@ -374,58 +383,54 @@ void PixEffect(u8_t effno)
     direction = random(fase * 3);
     break; // end EFF_MP_BARS
   case EFF_MP_HORX:
-    if (lastled >= MAX_MIDDLEPOINTS)
+    if (fase > MAX_MIDDLEPOINTS) //thru mid point
     {
-      lastled = 1;
-      lastcol32 = random(HUE_MAX);
-      PixSmooth();
+      fase = 0;
+      lastled = 0;
+      PixFadeAll(1);
+      break;
+    }
+    PixDrawMpXY(lastled, fase - (MAX_MIDDLEPOINTS / 2), lastcol32);
+    PixDrawMpXY(-lastled, fase - (MAX_MIDDLEPOINTS / 2), lastcol32);
+
+    lastled++;
+    if (lastled > MAX_MIDDLEPOINTS) //run thru x
+    {
+      lastled = 0;
+      lastcol32 = HueToRGB32(random(HUE_MAX), 255, 255);
+      fase++;
+    }
+    break; //END EFF_MP_HORX
+  case EFF_MP_HXMAS:
+    //splash
+    if (fase > 0)
+    {
+      fase--;
+      PixFadeAll(1);
       break;
     }
 
-    if (lastled % 2)
-      currcol32 = HueToRGB32(HUE_MAX - lastcol32, 255, 255);
-    else
-      currcol32 = HueToRGB32(lastcol32, 255, 255);
-
-    PixSet(Xmas.Stripe1.MiddlePoints[lastled] - fase, currcol32);
-    PixSet(Xmas.Stripe1.MiddlePoints[lastled] + fase, currcol32);
-    if (fase < 1)
-    {
-      fase = (Xmas.Stripe1.MiddlePoints[lastled] - Xmas.Stripe1.MiddlePoints[lastled - 1]) / 2;
-      lastled++;
-    }
-    fase--;
-    break; //END EFF_MP_HORX
-  case EFF_MP_HXMAS:
-    if (lastcol32 > HUE_MAX)
-    {
-      lastcol32 = 0;
-      colsat++;
-    }
-    currcol32 = HueToRGB32(lastcol32, colsat, 255);
-    if (lastled >= MAX_MIDDLEPOINTS)
+    if (lastled > 10)
     {
       lastled = 0;
-      PixFadeAll(1);
-      lastcol32++;
+      PixFill(lastcol32);
+      lastcol32 = HueToRGB32(random(HUE_MAX), 255, 255);
+      fase = random(128);
+      break;
     }
 
-    if (fase > 20)
+    for (int16_t tx = 0; tx < lastled; tx++)
     {
-      fase = 0;
-      lastled++;
+      for (int16_t ty = 0; ty < lastled; ty++)
+      {
+        PixDrawMpXY(tx, ty, lastcol32);
+        PixDrawMpXY(tx, -ty, lastcol32);
+        PixDrawMpXY(-tx, ty, lastcol32);
+        PixDrawMpXY(-tx, -ty, lastcol32);
+      }
     }
-    if ((fase < 10) && (lastled < (MAX_MIDDLEPOINTS / 2)))
-    {
-      currcol32 = PixFade32(COL_WHITE, colsat);
-    }
-    if ((fase > 10) && (lastled > (MAX_MIDDLEPOINTS / 2)))
-    {
-      currcol32 = PixFade32(COL_WHITE, colsat);
-    }
-    PixSet(Xmas.Stripe1.MiddlePoints[lastled] + int(10 - fase), currcol32);
-
-    fase++;
+    lastled++;
+    fase = random(30-lastled);
     break; //END EFF_MP_HXMAS
   }
   lasteffect = effno;
@@ -581,6 +586,40 @@ void PixFill(uint32_t col32)
   }
 }
 //-------
+//draws pixel,  x0 y0 are in center of Xmas.Stripe1.MiddlePoints
+void PixDrawMpXY(int8_t x, int8_t y, uint32_t col32)
+{
+  int8_t cy = MAX_MIDDLEPOINTS / 2;
+  cy = y + cy;
+  if ((cy < 0) || (cy >= MAX_MIDDLEPOINTS))
+    return;
+  //left & right margin
+  uint16_t lm;
+  if (cy > 0)
+  {
+    lm = (Xmas.Stripe1.MiddlePoints[cy] - Xmas.Stripe1.MiddlePoints[cy - 1]) / 2; //middle first
+    lm = Xmas.Stripe1.MiddlePoints[cy] - lm;
+  }
+  else
+  {
+    lm = 0;
+  }
+  uint16_t rm;
+  if (cy < (MAX_MIDDLEPOINTS - 1))
+  {
+    rm = (Xmas.Stripe1.MiddlePoints[cy + 1] - Xmas.Stripe1.MiddlePoints[cy]) / 2;
+    rm = Xmas.Stripe1.MiddlePoints[cy] + rm;
+  }
+  else
+  {
+    rm = PixBuffCount - 1;
+  }
+  int16_t pixx = Xmas.Stripe1.MiddlePoints[cy] + x;
+  if ((pixx < lm) || (pixx > rm))
+    return;
+  PixSet(pixx, col32);
+}
+//------------
 uint32_t HueToRGB32(uint32_t h, uint8_t sat, uint8_t val)
 {
   int32 i, p, q;

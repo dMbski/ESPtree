@@ -3,6 +3,7 @@
 #include "helpers.cpp"
 //functions
 void PixDrawMpXY(int8_t x, int8_t y, uint32_t col32);
+un_color32 PixGetMpXY(int8_t x, int8_t y, uint32_t retnocolor);
 uint32_t HueToRGB32(uint32_t h, uint8_t sat, uint8_t val);
 void PixFill(uint32_t col32);
 void PixScrollUp();
@@ -65,7 +66,7 @@ extern u8_t WlanStatus;
 #define EFF13_NAME F("Vert lines rainbow")
 #define EFF14_NAME F("Horiz rainbow bars")
 #define EFF15_NAME F("Horiz rainbow x")
-#define EFF16_NAME F("Splash")
+#define EFF16_NAME F("Center color slow")
 
 String EffectName(uint8_t no)
 {
@@ -118,322 +119,320 @@ void PixEffect(u8_t effno)
 {
   if (effno >= EFFECTS_COUNT)
     return;
-  uint16_t currled;
-  uint32_t currcol32;
-  static uint16_t lastled = 0;
-  static uint32_t lastcol32 = 0;
-  static uint8_t colsat = 0;
-  static uint8_t colval = 0;
-  static uint16_t fase = 0;
-  static int8_t direction = 0;
-  static u8_t lasteffect = 0;                     //to detect effect change
-  const uint8_t linebuffcount = MAX_MIDDLEPOINTS; //width of e buffer, one line, int becouse some eff have negative numbers
-  static int32_t linebuff[linebuffcount];
+  uint16_t tm16_currled;
+  uint32_t tm32_currcol;
+  un_color32 tmun_pixcol;
+  static uint16_t st16_lastled = 0;
+  static uint32_t st32_lastcolor = 0;
+  static uint8_t st8_colsat = 0;
+  static uint8_t st8_colval = 0;
+  static uint16_t st16_fase = 0;
+  static int8_t st8_direction = 0;
 
-  if (lastled > PixBuffCount)
-    lastled = 0;
+  if (st16_lastled > PixBuffCount)
+    st16_lastled = 0;
 
   switch (effno)
   {
   case EFF_TESTRGB:
-    lastled++;
-    fase++;
-    if (lastled >= PixBuffCount)
+    st16_fase++;
+    if (st16_lastled >= PixBuffCount)
     {
-      lastled = 0;
+      st16_lastled = 0;
       //set for wlna
       if (WlanStatus <= WLAN_SCAN_END)
-        currcol32 = COL_WHITE;
+        tm32_currcol = COL_WHITE;
       else if (WlanStatus <= WLAN_STA_RUN)
-        currcol32 = COL_BLUE;
+        tm32_currcol = COL_BLUE;
       else if (WlanStatus <= WLAN_WPS_END)
-        currcol32 = COL_YELOW;
+        tm32_currcol = COL_YELOW;
       else if (WlanStatus <= WLAN_AP_RUN)
-        currcol32 = COL_GREN;
+        tm32_currcol = COL_GREN;
       else
-        currcol32 = 0x00800000; //half red
-      PixFill(currcol32);
+        tm32_currcol = 0x00800000; //half red
+      PixFill(tm32_currcol);
       break;
     }
-    if (fase > 5)
-      fase = 0;
-    if (fase < 3)
-      currcol32 = COL_RED;
-    else if (fase < 5)
-      currcol32 = COL_GREN;
+    if (st16_fase > 5)
+      st16_fase = 0;
+    if (st16_fase < 3)
+      tm32_currcol = COL_RED;
+    else if (st16_fase < 5)
+      tm32_currcol = COL_GREN;
     else
-      currcol32 = COL_BLUE;
-    PixSet(lastled, currcol32);
+      tm32_currcol = COL_BLUE;
+    PixSet(st16_lastled, tm32_currcol);
+    st16_lastled++;
     break; //end EFF_TESTRGB
   case EFF_RAINBOW:
-    if (lastcol32 > HUE_MAX)
-      lastcol32 = 0;
+    if (st32_lastcolor > HUE_MAX)
+      st32_lastcolor = 0;
     PixScrollDown();
-    PixSet(PixBuffCount - 1, HueToRGB32(lastcol32, 255, 255));
-    lastcol32++;
+    PixSet(PixBuffCount - 1, HueToRGB32(st32_lastcolor, 255, 255));
+    st32_lastcolor++;
     break; //end EFF_RAINBOW
   case EFF_BLUE_SP:
-    PixSmooth();
-    lastled = random(PixBuffCount - 1);
-    currled = (PixBuffCount - lastled) / 2;
-    colsat = random(25);
-    while (currled)
+    st16_fase = random(PixBuffCount / 10);
+    st16_lastled += st16_fase + 1;
+    while (st16_fase)
     {
-      currled--;
-      currcol32 = PixColor32(colsat, colsat, colsat + random(230));
-      PixSet(lastled + currled, currcol32);
+      tmun_pixcol = PixGet(st16_lastled + st16_fase);
+      tmun_pixcol.c8.r = random(32);
+      tmun_pixcol.c8.g = tmun_pixcol.c8.r;
+      tmun_pixcol.c8.b = tmun_pixcol.c8.b + tmun_pixcol.c8.r;
+      if (tmun_pixcol.c8.b < tmun_pixcol.c8.r)
+        tmun_pixcol.c32 = COL_BLUE / 3;
+      PixSet(st16_lastled - st16_fase, tmun_pixcol.c32);
+      st16_fase--;
     }
-    PixSparkle(1, COL_WHITE);
+    if (st16_lastled % 2)
+    {
+      PixSparkle(1, COL_WHITE);
+    }
+    else
+    {
+      PixSmooth();
+    }
+
     break; //end EFF_BLUE_SP
   case EFF_RED_SP:
-    fase = random(PixBuffCount / 4);
-    PixFadeAll(fase / 3);
-    currcol32 = PixColor32(random(255), 0, 0);
-    PixSparkle(fase, currcol32);
-    if (!(fase % 4))
+    st16_fase = random(PixBuffCount / 10);
+    PixFadeAll(st16_fase / 3);
+    tm32_currcol = PixColor32(random(255), 0, 0);
+    PixSparkle(st16_fase, tm32_currcol);
+    if (!(st16_fase % 4))
       PixSparkle(1, COL_YELOW);
     break; //end EFF_RED_SP
   case EFF_RAINBOW_SP:
-    if (lastcol32 >= HUE_MAX)
-      lastcol32 = 0;
-    fase = 2 + random(10);
-    PixFadeAll(fase / 2);
-    PixSparkle(fase, HueToRGB32(lastcol32++, 255, 200));
+    if (st32_lastcolor >= HUE_MAX)
+      st32_lastcolor = 0;
+    PixFadeAll(2);
+    PixSparkle(random(PixBuffCount / 10), HueToRGB32(st32_lastcolor, 255, 200));
+    st32_lastcolor++;
     break; //end EFF_RAINBOW_SP
   case EFF_RIB_RAND:
-    if (lasteffect != effno)
+    if (st8_direction < 1)
+      st8_direction = 1;
+    st16_lastled += st8_direction;
+    if (st16_lastled > PixBuffCount)
     {
-      lastled = 0;
+      st32_lastcolor = random(HUE_MAX);
+      st8_direction = random(30);
+      PixFadeAll(2);
     }
-    if (lastled == 0)
-    {
-      lastcol32 = random(COL_WHITE);
-      fase = random(PixBuffCount / 5);
-      if (fase < 2)
-        fase = 1;
-    }
-    PixSet(lastled - 1, lastcol32);
-    PixSet(lastled + 1, lastcol32);
-    PixFadeAll(1);
-    PixSet(lastled, lastcol32);
-    lastled = lastled + fase;
+    PixSet(st16_lastled, HueToRGB32(st32_lastcolor, 255, 255));
     break; //end EFF_RIB_RAND
   case EFF_TWO_RAINBOW:
-    PixFadeAll(lastled / 20);
-    if (lastcol32 > HUE_MAX)
-      lastcol32 = 0;
-    PixSet(PixBuffCount - lastled, HueToRGB32(lastcol32 + (180 * HUE_RES), 255, 255));
-    PixSet(lastled, HueToRGB32(lastcol32, 255, 255));
-    lastled++;
-    lastcol32++;
+    PixFadeAll(st16_lastled / 20);
+    if (st32_lastcolor > HUE_MAX)
+      st32_lastcolor = 0;
+    PixSet(PixBuffCount - st16_lastled, HueToRGB32(st32_lastcolor + (180 * HUE_RES), 255, 255));
+    PixSet(st16_lastled, HueToRGB32(st32_lastcolor, 255, 255));
+    st16_lastled++;
+    st32_lastcolor++;
     break; //end EFF_TWO_RAINBOW
   case EFF_TWO_RG:
-    PixFadeAll((4 * lastled) / (PixBuffCount + 1));
-    PixSet(PixBuffCount - lastled, COL_GREN);
-    PixSet(lastled, COL_RED);
-    PixSparkle(lastled % 3, COL_WHITE);
-    lastled++;
+    PixFadeAll((4 * st16_lastled) / (PixBuffCount + 1));
+    PixSet(PixBuffCount - st16_lastled, COL_GREN);
+    PixSet(st16_lastled, COL_RED);
+    PixSparkle(st16_lastled % 3, COL_WHITE);
+    st16_lastled++;
     break; //end EFF_TWO_RG
   case EFF_TWO_COMETS:
-    if (lastled > (PixBuffCount / 2))
+    if (st16_lastled > (PixBuffCount / 2))
     {
-      lastled = 0;
-      lastcol32 = random(COL_WHITE);
+      st16_lastled = 0;
+      st32_lastcolor = random(COL_WHITE);
     }
-    PixFadeAll((lastled * 8) / (PixBuffCount + 1));
-    PixSet(lastled, lastcol32);
-    PixSet((PixBuffCount / 2) + lastled, lastcol32);
-    lastled++;
+    PixFadeAll((st16_lastled * 8) / (PixBuffCount + 1));
+    PixSet(st16_lastled, st32_lastcolor);
+    PixSet((PixBuffCount / 2) + st16_lastled, st32_lastcolor);
+    st16_lastled++;
     break; //end EFF_TWO_COMETS
   case EFF_COMET_RAND:
-    if (lastled == 0)
+    if (st16_lastled == 0)
     {
-      lastcol32 = HueToRGB32(random(HUE_MAX), 255, 255);
-      colval = 255 / (PixBuffCount / 2);
+      st32_lastcolor = HueToRGB32(random(HUE_MAX), 255, 255);
+      st8_colval = 255 / (PixBuffCount / 2);
     }
-    PixFadeAll(colval / 2);
-    if (!(lastled % 8))
+    PixFadeAll(st8_colval / 2);
+    if (!(st16_lastled % 8))
       PixSparkle(1, COL_WHITE);
-    PixSet(PixBuffCount - lastled, lastcol32);
-    lastled++;
+    PixSet(PixBuffCount - st16_lastled, st32_lastcolor);
+    st16_lastled++;
     break; //end EFF_COMET_RAND
   case EFF_MPOINTS:
-    if (lastcol32 > HUE_MAX)
-      lastcol32 = 0;
+    if (st32_lastcolor > HUE_MAX)
+      st32_lastcolor = 0;
 
-    currcol32 = HueToRGB32(lastcol32, 255, 255);
-    PixFill(currcol32);
-    if (lastcol32 % 2)
+    tm32_currcol = HueToRGB32(st32_lastcolor, 255, 255);
+    PixFill(tm32_currcol);
+    if (st32_lastcolor % 2)
     {
-      for (currled = 0; currled < MAX_MIDDLEPOINTS; currled++)
+      for (tm16_currled = 0; tm16_currled < MAX_MIDDLEPOINTS; tm16_currled++)
       {
-        PixSet(Xmas.Stripe1.MiddlePoints[currled], COL_WHITE);
+        PixSet(Xmas.Stripe1.MiddlePoints[tm16_currled], COL_WHITE);
       }
     }
-    lastcol32++;
+    st32_lastcolor++;
     break; //end EFF_MPOINTS
   case EFF_MP_MATRIX:
-    if (lasteffect != effno)
+    if (st8_direction < -(MAX_MIDDLEPOINTS / 2))
     {
-      for (fase = 0; fase < linebuffcount; fase++)
+      st8_direction = (MAX_MIDDLEPOINTS / 2);
+    }
+    if (st8_direction < 0)
+      PixFadeAll(1);
+    for (int8_t column = -30; column < 30; column++)
+    {
+      if (st8_direction > 0) //upper half chaos
       {
-        linebuff[fase] = MAX_MIDDLEPOINTS + random(MAX_MIDDLEPOINTS);
+        tm32_currcol = PixColor32(0, 135 + random(120), 0);
+        PixDrawMpXY(column, st8_direction, tm32_currcol);
       }
-      fase = 0;
+      else
+      {
+        tm32_currcol = PixGetMpXY(column, st8_direction + 1, COL_BLACK).c32;
+        PixDrawMpXY(column, st8_direction, tm32_currcol);
+      }
     }
-    if (fase >= linebuffcount)
-    {
-      fase = 0;
-      PixFadeAll(255 / (MAX_MIDDLEPOINTS * 2));
-    };
-    if ((linebuff[fase] < MAX_MIDDLEPOINTS) && (linebuff[fase] >= 0))
-    {
-      PixSet(Xmas.Stripe1.MiddlePoints[linebuff[fase]] - fase, COL_GREN);
-      PixSet(Xmas.Stripe1.MiddlePoints[linebuff[fase]] + fase, COL_GREN);
-    }
-    linebuff[fase] = linebuff[fase] - 1;
-    if (linebuff[fase] < (-MAX_MIDDLEPOINTS))
-    {
-      linebuff[fase] = MAX_MIDDLEPOINTS + random(MAX_MIDDLEPOINTS);
-    }
-    fase++;
+    st8_direction--;
     break; //end EFF_MP_MATRIX
   case EFF_MP_REDF:
-    PixFadeAll(fase);
-    for (colsat = MAX_MIDDLEPOINTS - 1; colsat > 0; colsat--) //allmiddlepoints from top
+    PixFadeAll(st16_fase);
+    for (st8_colsat = MAX_MIDDLEPOINTS - 1; st8_colsat > 0; st8_colsat--) //allmiddlepoints from top
     {
-      currled = Xmas.Stripe1.MiddlePoints[colsat];
-      lastled = Xmas.Stripe1.MiddlePoints[colsat - 1];
-      for (colval = 0; colval < MAX_MIDDLEPOINTS; colval++) //horizont
+      tm16_currled = Xmas.Stripe1.MiddlePoints[st8_colsat];
+      st16_lastled = Xmas.Stripe1.MiddlePoints[st8_colsat - 1];
+      for (st8_colval = 0; st8_colval < MAX_MIDDLEPOINTS; st8_colval++) //horizont
       {
-        PixSet(currled + colval, PixGet(lastled + colval).c32);
-        PixSet(currled - colval, PixGet(lastled - colval).c32);
+        PixSet(tm16_currled + st8_colval, PixGet(st16_lastled + st8_colval).c32);
+        PixSet(tm16_currled - st8_colval, PixGet(st16_lastled - st8_colval).c32);
       }
     }
 
-    PixSparkle(fase / 3, COL_WHITE);
+    PixSparkle(st16_fase / 3, COL_WHITE);
     PixSparkle(1, COL_YELOW);
-    if (fase > MAX_MIDDLEPOINTS)
+    if (st16_fase > MAX_MIDDLEPOINTS)
     {
-      fase = 0;
+      st16_fase = 0;
       PixSparkle(1, COL_WHITE);
-      for (direction = 0; direction < MAX_MIDDLEPOINTS; direction++) //draw 0
+      for (st8_direction = 0; st8_direction < MAX_MIDDLEPOINTS; st8_direction++) //draw 0
       {
-        currled = Xmas.Stripe1.MiddlePoints[fase];
-        colval = random(100);
-        currcol32 = PixColor32(55 + colval * 2, colval / 3, colval / 3);
-        PixSet(currled + direction, currcol32);
-        PixSet(currled - direction, currcol32);
+        tm16_currled = Xmas.Stripe1.MiddlePoints[st16_fase];
+        st8_colval = random(100);
+        tm32_currcol = PixColor32(55 + st8_colval * 2, st8_colval / 3, st8_colval / 3);
+        PixSet(tm16_currled + st8_direction, tm32_currcol);
+        PixSet(tm16_currled - st8_direction, tm32_currcol);
       }
       break;
     }
 
-    fase++;
+    st16_fase++;
     break; //end EFF_MP_RED
   case EFF_MP_LINE:
 
-    if (colsat > 0) //pause and fade
+    if (st8_colsat > 0) //pause and fade
     {
-      colsat--;
+      st8_colsat--;
       PixFadeAll(1);
       break;
     }
 
-    if (fase >= (MAX_MIDDLEPOINTS * 2))
+    if (st16_fase >= (MAX_MIDDLEPOINTS * 2))
     {
-      fase = 0;
-      PixFill(HueToRGB32(lastcol32, 255, 255));
-      lastcol32 = random(HUE_MAX);
-      colsat = random(60);
+      st16_fase = 0;
+      PixFill(HueToRGB32(st32_lastcolor, 255, 255));
+      st32_lastcolor = random(HUE_MAX);
+      st8_colsat = random(60);
       break;
     }
-    lastled = 0;
-    while (lastled < MAX_MIDDLEPOINTS)
+    st16_lastled = 0;
+    while (st16_lastled < MAX_MIDDLEPOINTS)
     {
-      currled = Xmas.Stripe1.MiddlePoints[lastled];
-      PixSet((currled - (MAX_MIDDLEPOINTS)) + fase, HueToRGB32(lastcol32, 255, 255));
-      lastled++;
+      tm16_currled = Xmas.Stripe1.MiddlePoints[st16_lastled];
+      PixSet((tm16_currled - (MAX_MIDDLEPOINTS)) + st16_fase, HueToRGB32(st32_lastcolor, 255, 255));
+      st16_lastled++;
     }
-    fase++;
-    lastcol32 += HUE_RES;
+    st16_fase++;
+    st32_lastcolor += HUE_RES;
     break; // end EFF_MP_LINE
   case EFF_MP_BARS:
     PixSmooth();
-    if (direction > 5)
+    if (st8_direction > 5)
     {
       PixFadeAll(1);
-      direction--;
+      st8_direction--;
       break;
     }
 
-    if ((fase > MAX_MIDDLEPOINTS) || (lastcol32 > HUE_MAX))
+    if ((st16_fase > MAX_MIDDLEPOINTS) || (st32_lastcolor > HUE_MAX))
     {
-      fase = 0;
-      lastcol32 = random(HUE_MAX);
+      st16_fase = 0;
+      st32_lastcolor = random(HUE_MAX);
     }
-    currcol32 = HueToRGB32(lastcol32, 255, 255);
+    tm32_currcol = HueToRGB32(st32_lastcolor, 255, 255);
     for (uint8_t x = 0; x < MAX_MIDDLEPOINTS; x++)
     {
-      currled = Xmas.Stripe1.MiddlePoints[fase];
-      PixSet(currled + x, currcol32);
-      PixSet(currled - x, currcol32);
+      tm16_currled = Xmas.Stripe1.MiddlePoints[st16_fase];
+      PixSet(tm16_currled + x, tm32_currcol);
+      PixSet(tm16_currled - x, tm32_currcol);
     }
-    fase++;
-    lastcol32 = lastcol32 + HUE_RES * (fase * HUE_RES);
-    direction = random(fase * 3);
+    st16_fase++;
+    st32_lastcolor = st32_lastcolor + HUE_RES * (st16_fase * HUE_RES);
+    st8_direction = random(st16_fase * 3);
     break; // end EFF_MP_BARS
   case EFF_MP_HORX:
-    if (fase > MAX_MIDDLEPOINTS) //thru mid point
+    if (st16_fase > MAX_MIDDLEPOINTS) //thru mid point
     {
-      fase = 0;
-      lastled = 0;
+      st16_fase = 0;
+      st16_lastled = 0;
       PixFadeAll(1);
       break;
     }
-    PixDrawMpXY(lastled, fase - (MAX_MIDDLEPOINTS / 2), lastcol32);
-    PixDrawMpXY(-lastled, fase - (MAX_MIDDLEPOINTS / 2), lastcol32);
+    PixDrawMpXY(st16_lastled, st16_fase - (MAX_MIDDLEPOINTS / 2), st32_lastcolor);
+    PixDrawMpXY(-st16_lastled, st16_fase - (MAX_MIDDLEPOINTS / 2), st32_lastcolor);
 
-    lastled++;
-    if (lastled > MAX_MIDDLEPOINTS) //run thru x
+    st16_lastled++;
+    if (st16_lastled > MAX_MIDDLEPOINTS) //run thru x
     {
-      lastled = 0;
-      lastcol32 = HueToRGB32(random(HUE_MAX), 255, 255);
-      fase++;
+      st16_lastled = 0;
+      st32_lastcolor = HueToRGB32(random(HUE_MAX), 255, 255);
+      st16_fase++;
     }
     break; //END EFF_MP_HORX
   case EFF_MP_HXMAS:
     //splash
-    if (fase > 0)
+    if (st16_fase > 0)
     {
-      fase--;
+      st16_fase--;
       PixFadeAll(1);
       break;
     }
 
-    if (lastled > 10)
+    if (st16_lastled > 10)
     {
-      lastled = 0;
-      PixFill(lastcol32);
-      lastcol32 = HueToRGB32(random(HUE_MAX), 255, 255);
-      fase = random(128);
+      st16_lastled = 0;
+      PixFill(st32_lastcolor);
+      st32_lastcolor = HueToRGB32(random(HUE_MAX), 255, 255);
+      st16_fase = random(128);
       break;
     }
 
-    for (int16_t tx = 0; tx < lastled; tx++)
+    tm32_currcol = st32_lastcolor;
+
+    for (int16_t tx = (-st16_lastled); tx < (st16_lastled); tx++)
     {
-      for (int16_t ty = 0; ty < lastled; ty++)
+      int16_t he = sqrt(st16_lastled * st16_lastled - tx * tx);
+      for (int16_t ty = (-he); ty < he; ty++)
       {
-        PixDrawMpXY(tx, ty, lastcol32);
-        PixDrawMpXY(tx, -ty, lastcol32);
-        PixDrawMpXY(-tx, ty, lastcol32);
-        PixDrawMpXY(-tx, -ty, lastcol32);
+        PixDrawMpXY(tx, ty, tm32_currcol);
       }
     }
-    lastled++;
-    fase = random(30-lastled);
+    st16_lastled++;
+    st16_fase = random(30 - st16_lastled);
     break; //END EFF_MP_HXMAS
   }
-  lasteffect = effno;
 }
 //-------------------------------------------------------
 inline uint32_t PixColor32(uint8_t r, uint8_t g, uint8_t b)
@@ -618,6 +617,42 @@ void PixDrawMpXY(int8_t x, int8_t y, uint32_t col32)
   if ((pixx < lm) || (pixx > rm))
     return;
   PixSet(pixx, col32);
+}
+//------------
+un_color32 PixGetMpXY(int8_t x, int8_t y, uint32_t retnocolor)
+{
+  int8_t cy = MAX_MIDDLEPOINTS / 2;
+  un_color32 ret;
+  ret.c32 = retnocolor;
+  cy = y + cy;
+  if ((cy < 0) || (cy >= MAX_MIDDLEPOINTS))
+    return ret;
+  //left & right margin
+  uint16_t lm;
+  if (cy > 0)
+  {
+    lm = (Xmas.Stripe1.MiddlePoints[cy] - Xmas.Stripe1.MiddlePoints[cy - 1]) / 2; //middle first
+    lm = Xmas.Stripe1.MiddlePoints[cy] - lm;
+  }
+  else
+  {
+    lm = 0;
+  }
+  uint16_t rm;
+  if (cy < (MAX_MIDDLEPOINTS - 1))
+  {
+    rm = (Xmas.Stripe1.MiddlePoints[cy + 1] - Xmas.Stripe1.MiddlePoints[cy]) / 2;
+    rm = Xmas.Stripe1.MiddlePoints[cy] + rm;
+  }
+  else
+  {
+    rm = PixBuffCount - 1;
+  }
+  int16_t pixx = Xmas.Stripe1.MiddlePoints[cy] + x;
+  if ((pixx < lm) || (pixx > rm))
+    return ret;
+
+  return (PixGet(pixx));
 }
 //------------
 uint32_t HueToRGB32(uint32_t h, uint8_t sat, uint8_t val)

@@ -173,24 +173,24 @@ union un_color32 {
 #define MAX_MIDDLEPOINTS 10
 struct struct_xmas_stripe
 {
-    uint8_t PinNo;
-    uint16_t neoPixelType;
-    uint16_t LedCounts;
-    uint32_t AmperageMax;
-    uint16_t MiddlePoints[MAX_MIDDLEPOINTS];
+    uint8_t PinNo{};
+    uint16_t neoPixelType{};
+    uint16_t LedCounts{};
+    uint32_t AmperageMax{};
+    uint16_t MiddlePoints[MAX_MIDDLEPOINTS]{};
 };
 struct struct_xmas_config
 {
     u8_t Magic = EEPROM_MAGIC;
     u8_t Ver = XMAS_VER;
-    char STAname[33];
-    char STApass[65];
-    char APname[33];
-    u8_t WifiMode;
-    u8_t OTAenable;
-    uint32_t APWifiTimeoutMs;
-    uint32_t EffectTimeoutMs;
-    u8_t EffectStartWith;
-    struct_xmas_stripe Stripe1;
+    char STAname[33]{};
+    char STApass[65]{};
+    char APname[33]{};
+    u8_t WifiMode{};
+    u8_t OTAenable{};
+    uint32_t APWifiTimeoutMs{};
+    uint32_t EffectTimeoutMs{};
+    u8_t EffectStartWith{};
+    struct_xmas_stripe Stripe1{};
 }; //extern xmas_config Xmas;
 #endif

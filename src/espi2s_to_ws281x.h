@@ -43,6 +43,6 @@ void prepareI2S(uint32_t pixelcount);
 //  returns power in mA
 //  powerfactor - 100 skips this percentage of value to set when sending (good for power or global brightness steering)
 //  Sends rgb values from rgbdata over i2s from un_color32
-uint32_t sendI2S(un_color32 *rgbdata32, uint32_t pixelcount, uint8_t neo_type, uint8_t powerfactor);
+uint32_t IRAM_ATTR sendI2S(un_color32 *rgbdata32, uint32_t pixelcount, uint8_t neo_type, uint8_t powerfactor);
 
 #endif

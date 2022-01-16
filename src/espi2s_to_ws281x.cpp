@@ -60,7 +60,7 @@ volatile NeoDmaState _dmaState;
 // handle here is the RX_EOF_INT status, which indicate the DMA has sent a buffer whose
 // descriptor has the 'EOF' field set to 1.
 // in the case of this code, the second to last state descriptor
-volatile static void ICACHE_RAM_ATTR i2s_slc_isr(void)
+volatile static void IRAM_ATTR  i2s_slc_isr(void)
 {
   ETS_SLC_INTR_DISABLE();
 
@@ -127,7 +127,7 @@ void StopDma()
   SLCRXL &= ~(SLCRXLAM << SLCRXLA); // clear RX descriptor address
 }
 
-bool IsReadyToUpdate()
+bool IRAM_ATTR  IsReadyToUpdate()
 {
   return (_dmaState == NeoDmaState_Idle);
 }
@@ -249,14 +249,14 @@ void prepareI2S(uint32_t pixelcount)
 }
 
 //sets nibble (4bits) no nonibb (0-7) in innumber (32bits)
-inline uint32_t ICACHE_RAM_ATTR setNibble(uint32_t innumber, uint32_t nibble, uint8_t nonibb)
+inline uint32_t IRAM_ATTR  setNibble(uint32_t innumber, uint32_t nibble, uint8_t nonibb)
 {
   nibble = (nibble & 0xF) << (4 * nonibb);
   innumber = innumber & ~(0xF << (4 * nonibb));
   return (innumber | nibble);
 }
 //---------------------------------
-uint32_t ICACHE_RAM_ATTR byteToWSData(uint8_t val)
+uint32_t IRAM_ATTR  byteToWSData(uint8_t val)
 {
   uint32_t ret = 0;
   for (uint8_t i = 0; i < 8; i++)
@@ -276,7 +276,7 @@ uint32_t ICACHE_RAM_ATTR byteToWSData(uint8_t val)
 
 //// version for un_color32
 
-inline void prepareI2Spacket(un_color32 *ledcolor, uint32_t *wspack, uint8_t neo_type, uint32_t powerfactor)
+inline void IRAM_ATTR  prepareI2Spacket(un_color32 *ledcolor, uint32_t *wspack, uint8_t neo_type, uint32_t powerfactor)
 {
   if (powerfactor < 100)
   {
@@ -318,7 +318,7 @@ inline void prepareI2Spacket(un_color32 *ledcolor, uint32_t *wspack, uint8_t neo
   }
 }
 
-uint32_t sendI2S(un_color32 *rgbdata32, uint32_t pixelcount, uint8_t neo_type, uint8_t powerfactor)
+uint32_t IRAM_ATTR sendI2S(un_color32 *rgbdata32, uint32_t pixelcount, uint8_t neo_type, uint8_t powerfactor)
 {
   while (!IsReadyToUpdate())
   {

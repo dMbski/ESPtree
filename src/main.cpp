@@ -149,7 +149,7 @@ void setup()
 #endif
 
   PixBuffer = new un_color32[PixBuffCount];
-  PixFill(0);
+  PixFillAll(0);
 
   TaskEffectChange = millis() + Xmas.EffectTimeoutMs;
   TaskEffectId = Xmas.EffectStartWith;
@@ -573,7 +573,7 @@ void Task_Button()
     if (ast)
     {
       NextEffect();
-      PixFill(COL_BLACK);
+      PixFillAll(COL_BLACK);
     }
   }
   lst0 = ast;
@@ -587,7 +587,7 @@ void Task_Button()
     if (ast)
     {
       PrevEffect();
-      PixFill(COL_WHITE);
+      PixFillAll(COL_WHITE);
     }
   }
   lst1 = ast;
@@ -1161,7 +1161,7 @@ void servers_handleConfigShowSave()
       }
     }
   }
-  ChangeEffect(EFF_MPOINTS);
+  ChangeEffect(EFF10_MPOINTS);
   ServerHTML.send_P(200, "text/html", page_configshow);
 }
 //--------
